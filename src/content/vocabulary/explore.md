@@ -1,4 +1,5 @@
 ---
+description: "探索；勘探；探讨"
 word: explore
 phonetic: /ɪkˈsplɔːr/
 pos: v.

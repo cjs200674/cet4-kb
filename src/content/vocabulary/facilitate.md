@@ -1,4 +1,5 @@
 ---
+description: "促进；使便利"
 word: facilitate
 phonetic: /fəˈsɪlɪteɪt/
 pos: v.

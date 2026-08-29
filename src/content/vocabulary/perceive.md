@@ -1,4 +1,5 @@
 ---
+description: "感知；察觉；理解"
 word: perceive
 phonetic: /pərˈsiːv/
 pos: v.

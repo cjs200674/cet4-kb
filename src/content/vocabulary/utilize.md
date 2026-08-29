@@ -1,4 +1,5 @@
 ---
+description: "利用；使用"
 word: utilize
 phonetic: /ˈjuːtəlaɪz/
 pos: v.

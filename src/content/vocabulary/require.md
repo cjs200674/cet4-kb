@@ -1,4 +1,5 @@
 ---
+description: "需要；要求"
 word: require
 phonetic: /rɪˈkwaɪər/
 pos: v.

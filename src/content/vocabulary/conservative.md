@@ -1,4 +1,5 @@
 ---
+description: "保守的；传统的；保守派"
 word: conservative
 phonetic: /kənˈsɜːrvətɪv/
 pos: adj. / n.

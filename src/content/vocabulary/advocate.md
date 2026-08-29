@@ -1,4 +1,5 @@
 ---
+description: "提倡；拥护；倡导者；律师"
 word: advocate
 phonetic: /ˈædvəkeɪt/ (v.) /ˈædvəkət/ (n.)
 pos: v. / n.

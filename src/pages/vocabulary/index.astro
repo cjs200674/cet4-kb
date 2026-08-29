@@ -1,6 +1,7 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import Flashcard from '../../components/Flashcard.astro';
+import WordSpeak from '../../components/WordSpeak.astro';
 import { getCollection } from 'astro:content';
 
 const entries = await getCollection('vocabulary');
@@ -18,6 +19,14 @@ const cards = entries.slice(0, 30).map((e) => ({
   example: '',
   tags: e.data.tags,
 }));
+
+// 朗读模式数据
+const speakWords = entries.map((e) => ({
+  word: e.data.word,
+  phonetic: e.data.phonetic || '',
+  pos: e.data.pos || '',
+  meaning: e.data.description || e.data.word,
+}));
 ---
 
 <Layout title="词汇" description="CET-4 高频词汇，间隔重复卡片复习">
@@ -27,6 +36,10 @@ const cards = entries.slice(0, 30).map((e) => ({
   <h2>🎴 间隔重复练习</h2>
   <p class="dim">点卡片看释义 · 下方按钮标记掌握度 · ← → 切换</p>
   <Flashcard collection="vocabulary" items={cards} />
+
+  <h2>🎧 朗读模式</h2>
+  <p class="dim">每个词读 2 遍英文 + 1 遍中文，词间停顿 1.5 秒，语速 0.65（慢）</p>
+  <WordSpeak words={speakWords} title="高频词朗读" />
 
   <h2>📋 全部词条</h2>
   <div class="card-grid">

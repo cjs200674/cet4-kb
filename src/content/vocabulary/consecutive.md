@@ -1,4 +1,5 @@
 ---
+description: "连续的；连贯的"
 word: consecutive
 phonetic: /kənˈsekjətɪv/
 pos: adj.

@@ -1,4 +1,5 @@
 ---
+description: "邻近的；毗连的"
 word: adjacent
 phonetic: /əˈdʒeɪsnt/
 pos: adj.

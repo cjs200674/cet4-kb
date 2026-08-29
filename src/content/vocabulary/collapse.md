@@ -1,4 +1,5 @@
 ---
+description: "倒塌；崩溃；瓦解"
 word: collapse
 phonetic: /kəˈlæps/
 pos: v. / n.

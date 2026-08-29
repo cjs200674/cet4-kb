@@ -1,4 +1,5 @@
 ---
+description: "承认；致谢；告知收悉"
 word: acknowledge
 phonetic: /əkˈnɑːlɪdʒ/
 pos: v.

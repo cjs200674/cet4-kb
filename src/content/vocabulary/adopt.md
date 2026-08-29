@@ -1,4 +1,5 @@
 ---
+description: "采纳；采用；收养"
 word: adopt
 phonetic: /əˈdɑːpt/
 pos: v.

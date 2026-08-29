@@ -1,4 +1,5 @@
 ---
+description: "产生；发电；生成"
 word: generate
 phonetic: /ˈdʒenəreɪt/
 pos: v.

@@ -1,4 +1,5 @@
 ---
+description: "积累；积聚"
 word: accumulate
 phonetic: /əˈkjuːmjəleɪt/
 pos: v.

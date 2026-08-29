@@ -1,4 +1,5 @@
 ---
+description: "容量；能力；身份"
 word: capacity
 phonetic: /kəˈpæsəti/
 pos: n.

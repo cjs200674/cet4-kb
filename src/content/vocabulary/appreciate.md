@@ -1,4 +1,5 @@
 ---
+description: "欣赏；感激；领会"
 word: appreciate
 phonetic: /əˈpriːʃieɪt/
 pos: v.

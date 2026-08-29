@@ -1,4 +1,5 @@
 ---
+description: "阻碍；妨碍"
 word: hinder
 phonetic: /ˈhɪndər/
 pos: v.

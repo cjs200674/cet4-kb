@@ -1,4 +1,5 @@
 ---
+description: "完成；实现；达到"
 word: accomplish
 phonetic: /əˈkɑːmplɪʃ/
 pos: v.

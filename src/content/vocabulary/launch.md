@@ -1,4 +1,5 @@
 ---
+description: "发射；启动；推出；下水"
 word: launch
 phonetic: /lɔːntʃ/
 pos: v. / n.

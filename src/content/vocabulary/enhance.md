@@ -1,4 +1,5 @@
 ---
+description: "提高；增强；增加"
 word: enhance
 phonetic: /ɪnˈhæns/
 pos: v.

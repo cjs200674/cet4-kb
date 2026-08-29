@@ -1,4 +1,5 @@
 ---
+description: "意识到；实现"
 word: realize
 phonetic: /ˈriːəlaɪz/
 pos: v.

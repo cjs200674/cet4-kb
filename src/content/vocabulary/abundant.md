@@ -1,4 +1,5 @@
 ---
+description: "丰富的；充裕的"
 word: abundant
 phonetic: /əˈbʌndənt/
 pos: adj.

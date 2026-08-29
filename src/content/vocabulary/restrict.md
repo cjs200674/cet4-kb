@@ -1,4 +1,5 @@
 ---
+description: "限制；约束"
 word: restrict
 phonetic: /rɪˈstrɪkt/
 pos: v.

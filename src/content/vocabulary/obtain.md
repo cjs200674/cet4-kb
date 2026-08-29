@@ -1,4 +1,5 @@
 ---
+description: "获得；得到"
 word: obtain
 phonetic: /əbˈteɪn/
 pos: v.

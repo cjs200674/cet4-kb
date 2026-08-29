@@ -1,4 +1,5 @@
 ---
+description: "促进；推广；晋升"
 word: promote
 phonetic: /prəˈmoʊt/
 pos: v.

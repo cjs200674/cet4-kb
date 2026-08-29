@@ -1,4 +1,5 @@
 ---
+description: "优先；优先事项"
 word: priority
 phonetic: /praɪˈɔːrəti/
 pos: n.

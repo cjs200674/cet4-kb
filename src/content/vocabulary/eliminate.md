@@ -1,4 +1,5 @@
 ---
+description: "消除；排除；淘汰"
 word: eliminate
 phonetic: /ɪˈlɪmɪneɪt/
 pos: v.

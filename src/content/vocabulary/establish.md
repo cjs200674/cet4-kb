@@ -1,4 +1,5 @@
 ---
+description: "建立；确立；证实"
 word: establish
 phonetic: /ɪˈstæblɪʃ/
 pos: v.

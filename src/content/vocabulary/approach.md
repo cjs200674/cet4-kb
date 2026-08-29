@@ -1,4 +1,5 @@
 ---
+description: "接近；方法；途径"
 word: approach
 phonetic: /əˈproʊtʃ/
 pos: v. / n.

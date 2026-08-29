@@ -1,4 +1,5 @@
 ---
+description: "明显的；表面上的"
 word: apparent
 phonetic: /əˈpærənt/
 pos: adj.

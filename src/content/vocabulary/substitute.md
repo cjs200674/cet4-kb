@@ -1,4 +1,5 @@
 ---
+description: "代替；替代品；代用品"
 word: substitute
 phonetic: /ˈsʌbstɪtuːt/ (n.) /ˈsʌbstɪtuːt/ (v.)
 pos: n. / v.

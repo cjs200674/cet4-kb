@@ -1,4 +1,5 @@
 ---
+description: "不可避免的；必然的"
 word: inevitable
 phonetic: /ɪnˈevɪtəbl/
 pos: adj.

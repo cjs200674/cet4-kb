@@ -1,4 +1,5 @@
 ---
+description: "停止；终止"
 word: cease
 phonetic: /siːs/
 pos: v.

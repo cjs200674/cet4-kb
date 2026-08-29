@@ -1,4 +1,5 @@
 ---
+description: "预期；预料；期待"
 word: anticipate
 phonetic: /ænˈtɪsɪpeɪt/
 pos: v.

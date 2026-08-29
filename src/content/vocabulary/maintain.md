@@ -1,4 +1,5 @@
 ---
+description: "维持；保养；坚持"
 word: maintain
 phonetic: /meɪnˈteɪn/
 pos: v.

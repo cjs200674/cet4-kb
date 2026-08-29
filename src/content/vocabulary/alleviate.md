@@ -1,4 +1,5 @@
 ---
+description: "减轻；缓和"
 word: alleviate
 phonetic: /əˈliːvieɪt/
 pos: v.

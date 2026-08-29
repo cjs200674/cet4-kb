@@ -1,4 +1,5 @@
 ---
+description: "转换；转变；改变"
 word: transform
 phonetic: /trænsˈfɔːrm/
 pos: v.

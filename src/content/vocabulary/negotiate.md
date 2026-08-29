@@ -1,4 +1,5 @@
 ---
+description: "协商；谈判；转让"
 word: negotiate
 phonetic: /nɪˈɡoʊʃieɪt/
 pos: v.

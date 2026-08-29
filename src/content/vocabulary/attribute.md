@@ -1,4 +1,5 @@
 ---
+description: "归因于；属性；特征"
 word: attribute
 phonetic: /əˈtrɪbjuːt/ (v.) /ˈætrɪbjuːt/ (n.)
 pos: v. / n.

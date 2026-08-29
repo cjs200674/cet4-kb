@@ -1,4 +1,5 @@
 ---
+description: "准确的；精确的"
 word: accurate
 phonetic: /ˈækjərət/
 pos: adj.

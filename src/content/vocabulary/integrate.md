@@ -1,4 +1,5 @@
 ---
+description: "整合；使一体化；融入"
 word: integrate
 phonetic: /ˈɪntɪɡreɪt/
 pos: v.

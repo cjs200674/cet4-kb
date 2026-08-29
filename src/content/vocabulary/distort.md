@@ -1,4 +1,5 @@
 ---
+description: "扭曲；歪曲；变形"
 word: distort
 phonetic: /dɪˈstɔːrt/
 pos: v.

@@ -1,4 +1,5 @@
 ---
+description: "操纵；操作；篡改"
 word: manipulate
 phonetic: /məˈnɪpjuleɪt/
 pos: v.

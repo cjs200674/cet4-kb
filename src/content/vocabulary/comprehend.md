@@ -1,4 +1,5 @@
 ---
+description: "理解；领悟；包含"
 word: comprehend
 phonetic: /ˌkɑːmprɪˈhend/
 pos: v.

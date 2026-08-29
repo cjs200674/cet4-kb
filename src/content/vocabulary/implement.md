@@ -1,4 +1,5 @@
 ---
+description: "实施；执行；工具"
 word: implement
 phonetic: /ˈɪmplɪment/ (v.) /ˈɪmplɪmənt/ (n.)
 pos: v. / n.

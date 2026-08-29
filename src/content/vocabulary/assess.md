@@ -1,4 +1,5 @@
 ---
+description: "评估；估价"
 word: assess
 phonetic: /əˈses/
 pos: v.

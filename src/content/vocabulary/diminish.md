@@ -1,4 +1,5 @@
 ---
+description: "减少；减小；贬低"
 word: diminish
 phonetic: /dɪˈmɪnɪʃ/
 pos: v.

@@ -1,4 +1,5 @@
 ---
+description: "贡献；捐献；促成"
 word: contribute
 phonetic: /kənˈtrɪbjuːt/
 pos: v.

@@ -1,4 +1,5 @@
 ---
+description: "足够的；适当的"
 word: adequate
 phonetic: /ˈædɪkwət/
 pos: adj.

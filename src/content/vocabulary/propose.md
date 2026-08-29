@@ -1,4 +1,5 @@
 ---
+description: "建议；提议；求婚"
 word: propose
 phonetic: /prəˈpoʊz/
 pos: v.

@@ -1,0 +1,258 @@
+---
+// 词汇朗读组件：每个词读 2 遍英文 + 1 遍中文，词间有停顿
+export interface WordItem {
+  word: string;
+  phonetic?: string;
+  pos?: string;
+  meaning: string; // 中文释义
+}
+
+export interface Props {
+  words: WordItem[];
+  title?: string;
+}
+
+const { words, title = '朗读模式' } = Astro.props;
+const data = JSON.stringify(words);
+---
+
+<div class="word-speak-host" data-words={data}>
+  <div class="speak-toolbar">
+    <button class="btn btn-primary ws-play" data-state="idle">
+      <span class="ws-icon">▶</span>
+      <span class="ws-label">开始朗读全部 {words.length} 词</span>
+    </button>
+    <button class="btn ws-stop" style="display:none;">⏹ 停止</button>
+    <span class="speak-hint dim">
+      语速 0.65 · 每词：英 ×2 + 中 ×1 · 词间停顿 1.5s
+    </span>
+  </div>
+
+  <div class="ws-progress mt-2">
+    <div class="ws-progress-bar"><div class="ws-progress-fill" style="width:0%"></div></div>
+    <div class="ws-progress-text dim">未开始</div>
+  </div>
+
+  <ol class="ws-list mt-2">
+    {words.map((w, i) => (
+      <li class="ws-item" data-idx={i} data-word={w.word}>
+        <span class="ws-num">{i + 1}</span>
+        <span class="ws-word">{w.word}</span>
+        {w.phonetic && <span class="ws-phonetic dim">{w.phonetic}</span>}
+        {w.pos && <span class="ws-pos tag">{w.pos}</span>}
+        <span class="ws-meaning">{w.meaning}</span>
+        <span class="ws-status">—</span>
+      </li>
+    ))}
+  </ol>
+</div>
+
+<script>
+  document.querySelectorAll<HTMLElement>('.word-speak-host').forEach((host) => {
+    const words: Array<any> = JSON.parse(host.dataset.words || '[]');
+    if (!words.length) return;
+
+    const playBtn = host.querySelector('.ws-play') as HTMLButtonElement;
+    const stopBtn = host.querySelector('.ws-stop') as HTMLButtonElement;
+    const iconEl = host.querySelector('.ws-icon') as HTMLElement;
+    const labelEl = host.querySelector('.ws-label') as HTMLElement;
+    const progressBar = host.querySelector('.ws-progress-fill') as HTMLElement;
+    const progressText = host.querySelector('.ws-progress-text') as HTMLElement;
+    const items = host.querySelectorAll<HTMLElement>('.ws-item');
+
+    let idx = 0;
+    let isPlaying = false;
+    const RATE = 0.65;          // 慢速
+    const EN_GAP = 350;         // 英文两遍之间
+    const EN_CN_GAP = 500;      // 英文第二遍到中文之间
+    const WORD_GAP = 1500;      // 词之间
+    const totalSteps = words.length * 3; // 每词 3 步：英1、英2、中
+
+    function setUi(state: 'idle' | 'playing') {
+      if (state === 'playing') {
+        playBtn.style.display = 'none';
+        stopBtn.style.display = 'inline-block';
+        labelEl.textContent = '朗读中…';
+      } else {
+        playBtn.style.display = 'inline-block';
+        stopBtn.style.display = 'none';
+        labelEl.textContent = `开始朗读全部 ${words.length} 词`;
+      }
+    }
+
+    function updateProgress(step: number, msg: string) {
+      const pct = Math.round((step / totalSteps) * 100);
+      progressBar.style.width = `${pct}%`;
+      progressText.textContent = msg;
+    }
+
+    function setItemStatus(i: number, status: string) {
+      const it = items[i];
+      if (!it) return;
+      const statusEl = it.querySelector('.ws-status');
+      if (statusEl) {
+        statusEl.textContent = status;
+        it.classList.remove('ws-active', 'ws-done');
+        if (status === '正在读…') it.classList.add('ws-active');
+        else if (status === '✓') it.classList.add('ws-done');
+      }
+    }
+
+    function stop() {
+      if (!('speechSynthesis' in window)) {
+        alert('当前浏览器不支持 speechSynthesis API，请用 Chrome / Edge / Safari');
+        return;
+      }
+      window.speechSynthesis.cancel();
+      isPlaying = false;
+      setUi('idle');
+      // 重置当前词状态
+      if (idx < words.length) {
+        setItemStatus(idx, '—');
+      }
+    }
+
+    function speak(text: string, lang: 'en-US' | 'zh-CN'): Promise<void> {
+      return new Promise((resolve) => {
+        if (!isPlaying) { resolve(); return; }
+        const u = new SpeechSynthesisUtterance(text);
+        u.lang = lang;
+        u.rate = RATE;
+        u.onend = () => resolve();
+        u.onerror = () => resolve();
+        try { window.speechSynthesis.speak(u); } catch { resolve(); }
+      });
+    }
+
+    async function run() {
+      isPlaying = true;
+      setUi('playing');
+      while (idx < words.length && isPlaying) {
+        const w = words[idx];
+        updateProgress(idx * 3, `第 ${idx + 1}/${words.length} 词: ${w.word}`);
+
+        // 第 1 遍英文
+        setItemStatus(idx, '英1…');
+        await speak(w.word, 'en-US');
+        if (!isPlaying) return;
+        await sleep(EN_GAP);
+
+        // 第 2 遍英文
+        setItemStatus(idx, '英2…');
+        await speak(w.word, 'en-US');
+        if (!isPlaying) return;
+        await sleep(EN_CN_GAP);
+
+        // 第 1 遍中文
+        setItemStatus(idx, '中…');
+        await speak(w.meaning, 'zh-CN');
+        if (!isPlaying) return;
+
+        setItemStatus(idx, '✓');
+        if (idx < words.length - 1) {
+          await sleep(WORD_GAP);
+        }
+        idx++;
+      }
+      if (isPlaying) {
+        updateProgress(totalSteps, '🎉 全部完成！');
+      }
+      isPlaying = false;
+      setUi('idle');
+    }
+
+    function sleep(ms: number): Promise<void> {
+      return new Promise((r) => setTimeout(r, ms));
+    }
+
+    playBtn.addEventListener('click', () => {
+      if (!('speechSynthesis' in window)) {
+        alert('当前浏览器不支持 speechSynthesis API，请用 Chrome / Edge / Safari');
+        return;
+      }
+      // 重置
+      idx = 0;
+      items.forEach((it) => {
+        const s = it.querySelector('.ws-status');
+        if (s) s.textContent = '—';
+        it.classList.remove('ws-active', 'ws-done');
+      });
+      updateProgress(0, '准备中…');
+      run();
+    });
+
+    stopBtn.addEventListener('click', stop);
+  });
+</script>
+
+<style>
+  .word-speak-host {
+    background: var(--c-bg-soft);
+    border: 1px solid var(--c-border);
+    border-radius: 10px;
+    padding: 16px;
+    margin: 16px 0;
+  }
+  .speak-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .speak-hint { font-size: 12px; }
+  .ws-progress {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .ws-progress-bar {
+    flex: 1;
+    height: 6px;
+    background: var(--c-bg-soft-2);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .ws-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--c-accent), var(--c-accent-2));
+    transition: width 0.3s;
+  }
+  .ws-progress-text { font-size: 12px; min-width: 200px; }
+  .ws-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    max-height: 400px;
+    overflow-y: auto;
+  }
+  .ws-item {
+    display: grid;
+    grid-template-columns: 30px 1fr auto auto 1fr 60px;
+    gap: 10px;
+    align-items: center;
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--c-border);
+    font-size: 14px;
+    transition: background 0.2s;
+  }
+  .ws-item:hover { background: var(--c-bg-soft-2); }
+  .ws-item.ws-active {
+    background: rgba(88, 166, 255, 0.12);
+    font-weight: 600;
+  }
+  .ws-item.ws-done .ws-word { color: var(--c-accent-2); }
+  .ws-num { color: var(--c-text-dim); font-family: var(--font-mono); }
+  .ws-word { color: var(--c-text); font-weight: 600; }
+  .ws-phonetic { font-family: var(--font-mono); font-size: 12px; }
+  .ws-meaning { color: var(--c-text-soft); }
+  .ws-status {
+    text-align: right;
+    color: var(--c-accent);
+    font-size: 12px;
+    font-family: var(--font-mono);
+  }
+  @media (max-width: 700px) {
+    .ws-item { grid-template-columns: 24px 1fr; gap: 4px; }
+    .ws-phonetic, .ws-pos, .ws-status { display: none; }
+  }
+</style>

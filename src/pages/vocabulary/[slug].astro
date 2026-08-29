@@ -9,7 +9,7 @@ export async function getStaticPaths() {
 
 const { entry } = Astro.props;
 const { Content } = await entry.render();
-const base = import.meta.env.BASE_URL;
+const base = (import.meta.env.BASE_URL || "/").replace(/\/?$/, "/");
 ---
 
 <Layout title={entry.data.word} description={entry.data.description}>
@@ -26,6 +26,93 @@ const base = import.meta.env.BASE_URL;
       </div>
     </header>
 
+    <div class="speak-toolbar">
+      <button class="btn btn-primary single-speak" data-state="idle" style="background: var(--c-accent); color: #000; border-color: var(--c-accent); font-weight: 600;">
+        <span class="ss-icon">▶</span>
+        <span class="ss-label">朗读：英文 ×2 + 中文释义</span>
+      </button>
+      <button class="btn ss-stop" style="display:none;">⏹ 停止</button>
+      <span class="speak-hint dim">语速 0.65（慢） · 间隔 0.3-1.5s</span>
+    </div>
+
     <Content />
   </article>
+
+  <script define:vars={{ word: entry.data.word, meaning: entry.data.description || '' }}>
+    (() => {
+      if (!('speechSynthesis' in window)) return;
+
+      const playBtn = document.querySelector('.single-speak');
+      const stopBtn = document.querySelector('.ss-stop');
+      let isPlaying = false;
+
+      function setUi(s) {
+        if (s === 'playing') {
+          playBtn.style.display = 'none';
+          stopBtn.style.display = 'inline-block';
+        } else {
+          playBtn.style.display = 'inline-block';
+          stopBtn.style.display = 'none';
+        }
+      }
+
+      function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+      function speak(text, lang) {
+        return new Promise(resolve => {
+          if (!isPlaying) { resolve(); return; }
+          const u = new SpeechSynthesisUtterance(text);
+          u.lang = lang;
+          u.rate = 0.65;
+          u.onend = () => resolve();
+          u.onerror = () => resolve();
+          try { window.speechSynthesis.speak(u); } catch { resolve(); }
+        });
+      }
+
+      async function play() {
+        isPlaying = true;
+        setUi('playing');
+        // 英 1
+        await speak(word, 'en-US');
+        if (!isPlaying) return;
+        await sleep(350);
+        // 英 2
+        await speak(word, 'en-US');
+        if (!isPlaying) return;
+        await sleep(500);
+        // 中文
+        await speak(meaning, 'zh-CN');
+        isPlaying = false;
+        setUi('idle');
+      }
+
+      playBtn.addEventListener('click', () => {
+        if (isPlaying) return;
+        window.speechSynthesis.cancel();
+        play();
+      });
+
+      stopBtn.addEventListener('click', () => {
+        window.speechSynthesis.cancel();
+        isPlaying = false;
+        setUi('idle');
+      });
+    })();
+  </script>
+
+  <style>
+    .speak-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin: 12px 0 20px;
+      padding: 10px 14px;
+      background: var(--c-bg-soft);
+      border: 1px solid var(--c-border);
+      border-radius: 8px;
+    }
+    .speak-hint { font-size: 12px; }
+  </style>
 </Layout>

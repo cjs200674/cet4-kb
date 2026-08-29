@@ -1,4 +1,5 @@
 ---
+description: "执行；强制实施"
 word: enforce
 phonetic: /ɪnˈfɔːrs/
 pos: v.

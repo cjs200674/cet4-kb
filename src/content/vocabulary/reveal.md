@@ -1,4 +1,5 @@
 ---
+description: "揭示；透露；显示"
 word: reveal
 phonetic: /rɪˈviːl/
 pos: v.

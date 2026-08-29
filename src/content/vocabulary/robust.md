@@ -1,4 +1,5 @@
 ---
+description: "强健的；耐用的；坚定的"
 word: robust
 phonetic: /roʊˈbʌst/
 pos: adj.

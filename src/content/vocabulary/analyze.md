@@ -1,4 +1,5 @@
 ---
+description: "分析；分解"
 word: analyze
 phonetic: /ˈænəlaɪz/
 pos: v.

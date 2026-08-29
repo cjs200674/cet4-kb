@@ -1,4 +1,5 @@
 ---
+description: "补偿；赔偿；弥补"
 word: compensate
 phonetic: /ˈkɑːmpenseɪt/
 pos: v.

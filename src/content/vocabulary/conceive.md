@@ -1,4 +1,5 @@
 ---
+description: "构想；设想；怀孕"
 word: conceive
 phonetic: /kənˈsiːv/
 pos: v.

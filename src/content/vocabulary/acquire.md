@@ -1,4 +1,5 @@
 ---
+description: "获得；习得；购得"
 word: acquire
 phonetic: /əˈkwaɪər/
 pos: v.

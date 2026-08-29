@@ -1,4 +1,5 @@
 ---
+description: "适度的；中等的；缓和"
 word: moderate
 phonetic: /ˈmɑːdərət/ (adj./n.) /ˈmɑːdəreɪt/ (v.)
 pos: adj. / n. / v.

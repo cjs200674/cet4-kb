@@ -1,4 +1,5 @@
 ---
+description: "多种多样的；不同的"
 word: diverse
 phonetic: /daɪˈvɜːrs/
 pos: adj.

@@ -1,4 +1,5 @@
 ---
+description: "推行；强制实行；征税"
 word: impose
 phonetic: /ɪmˈpoʊz/
 pos: v.
