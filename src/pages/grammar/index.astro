@@ -1,0 +1,26 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { getCollection } from 'astro:content';
+
+const entries = await getCollection('grammar');
+const base = import.meta.env.BASE_URL;
+---
+
+<Layout title="语法" description="CET-4 重点语法 + 易错点">
+  <h1>✏️ 语法</h1>
+  <p class="muted">语法是阅读、写作、翻译的底座</p>
+
+  <h2>📚 专题</h2>
+  <div class="card-grid">
+    {entries.map((e) => (
+      <a href={`${base}grammar/${e.slug}`} class="card">
+        <h3>{e.data.title}</h3>
+        <div class="card-meta">
+          {e.data.topic && <span class="tag">{e.data.topic}</span>}
+          <span class={`tag tag-${e.data.difficulty}`}>{e.data.difficulty}</span>
+        </div>
+        <p class="card-desc">{e.data.description || ''}</p>
+      </a>
+    ))}
+  </div>
+</Layout>

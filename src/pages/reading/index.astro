@@ -1,0 +1,36 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { getCollection } from 'astro:content';
+
+const entries = await getCollection('reading');
+entries.sort((a, b) => (b.data.year || 0) - (a.data.year || 0));
+const base = import.meta.env.BASE_URL;
+---
+
+<Layout title="阅读" description="CET-4 阅读理解，考点分析 + 真题精讲">
+  <h1>📖 阅读</h1>
+  <p class="muted">阅读占总分 35%，性价比最高的提分项</p>
+
+  <h2>🎯 备考策略</h2>
+  <ul>
+    <li><strong>词汇先行</strong>：阅读理解的最大障碍是词汇，不是语法</li>
+    <li><strong>长难句拆解</strong>：每天精读 2-3 个长难句，建立句子结构感</li>
+    <li><strong>题型分类训练</strong>：选词填空、段落匹配、仔细阅读，各有套路</li>
+    <li><strong>真题为王</strong>：模拟题永远比不上真题，10 年真题刷 3 遍</li>
+  </ul>
+
+  <h2>📋 真题样例</h2>
+  <div class="card-grid">
+    {entries.map((e) => (
+      <a href={`${base}reading/${e.slug}`} class="card">
+        <h3>{e.data.title}</h3>
+        <div class="card-meta">
+          {e.data.year && <span class="tag">{e.data.year} 年</span>}
+          {e.data.passageType && <span class="tag">{e.data.passageType}</span>}
+          {e.data.source && <span class="dim">{e.data.source}</span>}
+        </div>
+        <p class="card-desc">{e.data.description || ''}</p>
+      </a>
+    ))}
+  </div>
+</Layout>

@@ -1,0 +1,179 @@
+---
+// 通用刷题组件
+export interface QuizOption {
+  id: string;
+  text: string;
+}
+export interface QuizQuestion {
+  id: string;
+  question: string;
+  options: QuizOption[];
+  correct: string; // option id
+  explain?: string;
+}
+
+export interface Props {
+  questions: QuizQuestion[];
+  title?: string;
+}
+
+const { questions, title = '刷题' } = Astro.props;
+const data = JSON.stringify(questions);
+---
+
+<div class="quiz-host" data-quiz={data}>
+  <h3 class="quiz-title">{title}</h3>
+  <div class="quiz-body">
+    <div class="quiz-meta">
+      题目 <span class="q-current">1</span> / <span class="q-total">{questions.length}</span>
+      · 正确率 <span class="q-acc">--</span>
+    </div>
+    <div class="quiz-question q-text"></div>
+    <div class="quiz-options q-opts"></div>
+    <div class="quiz-explain q-explain hidden"></div>
+    <div class="quiz-nav mt-2">
+      <button class="btn q-prev">← 上一题</button>
+      <button class="btn btn-primary q-next">下一题 →</button>
+    </div>
+  </div>
+  <div class="quiz-result hidden">
+    <h3>🎉 完成！</h3>
+    <p>本次正确率：<span class="final-acc"></span></p>
+    <p>正确 <span class="final-correct"></span> / 共 <span class="final-total"></span> 题</p>
+    <button class="btn btn-primary q-restart">再来一次</button>
+  </div>
+</div>
+
+<script>
+  document.querySelectorAll<HTMLElement>('.quiz-host').forEach((host) => {
+    const questions: Array<any> = JSON.parse(host.dataset.quiz || '[]');
+    if (!questions.length) return;
+
+    const body = host.querySelector('.quiz-body')!;
+    const result = host.querySelector('.quiz-result')!;
+    const currentEl = host.querySelector('.q-current')!;
+    const totalEl = host.querySelector('.q-total')!;
+    const accEl = host.querySelector('.q-acc')!;
+    const textEl = host.querySelector('.q-text')!;
+    const optsEl = host.querySelector('.q-opts')!;
+    const explainEl = host.querySelector('.q-explain')!;
+    const prevBtn = host.querySelector('.q-prev')!;
+    const nextBtn = host.querySelector('.q-next')!;
+    const restartBtn = host.querySelector('.q-restart')!;
+    const finalAcc = host.querySelector('.final-acc')!;
+    const finalCorrect = host.querySelector('.final-correct')!;
+    const finalTotal = host.querySelector('.final-total')!;
+
+    totalEl.textContent = String(questions.length);
+
+    let idx = 0;
+    const answers: Record<number, string> = {};
+    let correct = 0;
+
+    function render() {
+      const q = questions[idx];
+      currentEl.textContent = String(idx + 1);
+      textEl.innerHTML = q.question;
+      optsEl.innerHTML = '';
+      explainEl.classList.add('hidden');
+      explainEl.innerHTML = '';
+      q.options.forEach((o: any) => {
+        const btn = document.createElement('button');
+        btn.className = 'quiz-option';
+        btn.textContent = `${o.id}. ${o.text}`;
+        btn.dataset.id = o.id;
+        btn.addEventListener('click', () => handleAnswer(o.id, btn));
+        optsEl.appendChild(btn);
+      });
+      // 恢复已答
+      if (answers[idx]) {
+        const saved = answers[idx];
+        optsEl.querySelectorAll<HTMLButtonElement>('.quiz-option').forEach((b) => {
+          b.disabled = true;
+          if (b.dataset.id === q.correct) b.classList.add('correct');
+          else if (b.dataset.id === saved) b.classList.add('wrong');
+        });
+        if (q.explain) {
+          explainEl.classList.remove('hidden');
+          explainEl.innerHTML = `<strong>解析：</strong>${q.explain}`;
+        }
+      }
+      updateAcc();
+      prevBtn.toggleAttribute('disabled', idx === 0);
+    }
+
+    function handleAnswer(id: string, btn: HTMLButtonElement) {
+      if (answers[idx] !== undefined) return;
+      const q = questions[idx];
+      answers[idx] = id;
+      const isCorrect = id === q.correct;
+      if (isCorrect) correct++;
+      optsEl.querySelectorAll<HTMLButtonElement>('.quiz-option').forEach((b) => {
+        b.disabled = true;
+        if (b.dataset.id === q.correct) b.classList.add('correct');
+        else if (b === btn) b.classList.add('wrong');
+      });
+      if (q.explain) {
+        explainEl.classList.remove('hidden');
+        explainEl.innerHTML = `<strong>解析：</strong>${q.explain}`;
+      }
+      updateAcc();
+      saveProgress();
+    }
+
+    function updateAcc() {
+      const answered = Object.keys(answers).length;
+      if (!answered) {
+        accEl.textContent = '--';
+        return;
+      }
+      const acc = Math.round((correct / answered) * 100);
+      accEl.textContent = `${acc}%`;
+    }
+
+    function saveProgress() {
+      const key = 'cet4-quiz-stats';
+      const stats = JSON.parse(localStorage.getItem(key) || '{}');
+      stats.total = (stats.total || 0) + 1;
+      stats.correct = (stats.correct || 0) + (Object.keys(answers).length === questions.length && answers[idx] === questions[idx].correct ? 1 : 0);
+      localStorage.setItem(key, JSON.stringify(stats));
+      window.dispatchEvent(new CustomEvent('cet4-progress-update'));
+    }
+
+    function finish() {
+      body.classList.add('hidden');
+      result.classList.remove('hidden');
+      const acc = Math.round((correct / questions.length) * 100);
+      finalAcc.textContent = `${acc}%`;
+      finalCorrect.textContent = String(correct);
+      finalTotal.textContent = String(questions.length);
+    }
+
+    prevBtn.addEventListener('click', () => {
+      if (idx > 0) {
+        idx--;
+        render();
+      }
+    });
+
+    nextBtn.addEventListener('click', () => {
+      if (idx < questions.length - 1) {
+        idx++;
+        render();
+      } else {
+        finish();
+      }
+    });
+
+    restartBtn.addEventListener('click', () => {
+      idx = 0;
+      correct = 0;
+      for (const k of Object.keys(answers)) delete answers[k];
+      body.classList.remove('hidden');
+      result.classList.add('hidden');
+      render();
+    });
+
+    render();
+  });
+</script>

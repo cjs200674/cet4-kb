@@ -1,0 +1,20 @@
+{
+  "name": "cet4-kb",
+  "type": "module",
+  "version": "0.1.0",
+  "private": true,
+  "description": "大学英语四级（CET-4）备考知识库 — 词汇 / 阅读 / 听力 / 语法 / 写作 / 间隔重复 / 刷题 / 进度仪表盘",
+  "scripts": {
+    "dev": "astro dev",
+    "start": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro"
+  },
+  "dependencies": {
+    "@astrojs/check": "^0.9.4",
+    "@astrojs/sitemap": "^3.2.1",
+    "astro": "^5.1.5",
+    "typescript": "^5.7.2"
+  }
+}

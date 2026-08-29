@@ -1,0 +1,46 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Flashcard from '../../components/Flashcard.astro';
+import { getCollection } from 'astro:content';
+
+const entries = await getCollection('vocabulary');
+
+// 按字母排序
+entries.sort((a, b) => a.data.word.localeCompare(b.data.word));
+
+const base = import.meta.env.BASE_URL;
+const cards = entries.slice(0, 30).map((e) => ({
+  id: e.slug,
+  front: e.data.word,
+  back: e.data.description || '',
+  phonetic: e.data.phonetic,
+  pos: e.data.pos,
+  example: '',
+  tags: e.data.tags,
+}));
+---
+
+<Layout title="词汇" description="CET-4 高频词汇，间隔重复卡片复习">
+  <h1>📚 词汇</h1>
+  <p class="muted">共 {entries.length} 个词条 · 标记掌握度后系统会自动安排复习</p>
+
+  <h2>🎴 间隔重复练习</h2>
+  <p class="dim">点卡片看释义 · 下方按钮标记掌握度 · ← → 切换</p>
+  <Flashcard collection="vocabulary" items={cards} />
+
+  <h2>📋 全部词条</h2>
+  <div class="card-grid">
+    {entries.map((e) => (
+      <a href={`${base}vocabulary/${e.slug}`} class="card">
+        <h3>{e.data.word}</h3>
+        <div class="card-meta">
+          {e.data.phonetic && <span class="dim">{e.data.phonetic}</span>}
+          {e.data.pos && <span class="tag">{e.data.pos}</span>}
+          <span class={`tag tag-${e.data.difficulty}`}>{e.data.difficulty}</span>
+          {e.data.tags?.slice(0, 2).map((t) => <span class="tag">{t}</span>)}
+        </div>
+        <p class="card-desc">{e.data.description || e.data.word}</p>
+      </a>
+    ))}
+  </div>
+</Layout>

@@ -1,0 +1,195 @@
+---
+// 间隔重复卡片组件
+// 数据来源：父组件传入，存储到 localStorage 的 SM-2 简化版
+export interface FlashcardItem {
+  id: string;
+  front: string;
+  back: string;
+  phonetic?: string;
+  pos?: string;
+  example?: string;
+  tags?: string[];
+}
+
+export interface Props {
+  collection: string; // 'vocabulary' | 'reading' | 'listening' etc
+  items: FlashcardItem[];
+}
+
+const { collection, items } = Astro.props;
+const cardData = JSON.stringify(items);
+---
+
+<div
+  class="flashcard-host"
+  data-collection={collection}
+  data-cards={cardData}
+>
+  <div class="flashcard-counter">
+    <span class="counter-current">1</span> / <span class="counter-total">{items.length}</span>
+  </div>
+
+  <div class="flashcard" id="fc-card">
+    <div class="flashcard-inner">
+      <div class="flashcard-front">
+        <div class="flashcard-pos"><span class="fc-pos"></span></div>
+        <div class="flashcard-word fc-word"></div>
+        <div class="flashcard-phonetic fc-phonetic"></div>
+        <div class="flashcard-hint">点击卡片查看释义 · ← → 切换</div>
+      </div>
+      <div class="flashcard-back">
+        <div class="flashcard-meaning fc-meaning"></div>
+        <div class="fc-example"></div>
+        <div class="fc-tags"></div>
+        <div class="flashcard-hint">点击卡片翻回 · ← → 切换</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="flashcard-actions">
+    <button class="btn btn-hard" data-rate="hard">
+      😣 困难
+    </button>
+    <button class="btn btn-good" data-rate="good">
+      🤔 一般
+    </button>
+    <button class="btn btn-easy" data-rate="easy">
+      😎 简单
+    </button>
+  </div>
+
+  <div class="flashcard-progress">
+    <span class="fp-remaining"></span>
+  </div>
+</div>
+
+<script>
+  // 间隔重复算法（SM-2 简化版）
+  // 数据存 localStorage: { interval, ease, due, reps }
+  type CardProgress = {
+    interval: number; // 复习间隔（天）
+    ease: number; // 难度系数（默认 2.5）
+    due: number; // 下次复习时间（时间戳）
+    reps: number; // 复习次数
+    lapses: number; // 遗忘次数
+  };
+
+  type Storage = Record<string, CardProgress>;
+
+  const STORAGE_KEY = 'cet4-progress';
+
+  function loadStorage(): Storage {
+    try {
+      return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+    } catch {
+      return {};
+    }
+  }
+
+  function saveStorage(s: Storage) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
+    window.dispatchEvent(new CustomEvent('cet4-progress-update'));
+  }
+
+  function getProgress(storage: Storage, id: string): CardProgress {
+    if (storage[id]) return storage[id];
+    return { interval: 0, ease: 2.5, due: Date.now(), reps: 0, lapses: 0 };
+  }
+
+  // SM-2 简化版
+  function updateProgress(p: CardProgress, rate: 'hard' | 'good' | 'easy'): CardProgress {
+    const quality = rate === 'hard' ? 2 : rate === 'good' ? 4 : 5;
+    if (quality < 3) {
+      p.reps = 0;
+      p.lapses += 1;
+      p.interval = 1;
+    } else {
+      p.reps += 1;
+      if (p.reps === 1) p.interval = 1;
+      else if (p.reps === 2) p.interval = 3;
+      else p.interval = Math.round(p.interval * p.ease);
+      p.ease = Math.max(1.3, p.ease + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02)));
+    }
+    p.due = Date.now() + p.interval * 24 * 60 * 60 * 1000;
+    return p;
+  }
+
+  // 初始化所有 flashcard 组件
+  document.querySelectorAll<HTMLElement>('.flashcard-host').forEach((host) => {
+    const collection = host.dataset.collection!;
+    const cards: Array<any> = JSON.parse(host.dataset.cards || '[]');
+    if (!cards.length) return;
+
+    const storage = loadStorage();
+    let idx = 0;
+    let flipped = false;
+
+    const cardEl = host.querySelector('.flashcard')!;
+    const wordEl = host.querySelector('.fc-word')!;
+    const posEl = host.querySelector('.fc-pos')!;
+    const phoneticEl = host.querySelector('.fc-phonetic')!;
+    const meaningEl = host.querySelector('.fc-meaning')!;
+    const exampleEl = host.querySelector('.fc-example')!;
+    const tagsEl = host.querySelector('.fc-tags')!;
+    const currentEl = host.querySelector('.counter-current')!;
+    const remainingEl = host.querySelector('.fp-remaining')!;
+
+    function render() {
+      const c = cards[idx];
+      wordEl.textContent = c.front;
+      posEl.textContent = c.pos || '';
+      phoneticEl.textContent = c.phonetic || '';
+      meaningEl.textContent = c.back;
+      exampleEl.innerHTML = c.example ? `<br><em>例：</em>${c.example}` : '';
+      tagsEl.innerHTML = (c.tags || [])
+        .map((t: string) => `<span class="tag">${t}</span>`)
+        .join(' ');
+      currentEl.textContent = String(idx + 1);
+      flipped = false;
+      cardEl.classList.remove('flipped');
+      updateRemaining();
+    }
+
+    function updateRemaining() {
+      const reviewed = Object.keys(storage).filter((id) => {
+        const p = storage[id];
+        return p.reps > 0 && cards.find((c) => c.id === id);
+      }).length;
+      remainingEl.textContent = `本组进度：${reviewed}/${cards.length} 张已复习`;
+    }
+
+    cardEl.addEventListener('click', () => {
+      flipped = !flipped;
+      cardEl.classList.toggle('flipped', flipped);
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === ' ' || e.key === 'Enter') {
+        e.preventDefault();
+        flipped = !flipped;
+        cardEl.classList.toggle('flipped', flipped);
+      } else if (e.key === 'ArrowRight') {
+        idx = (idx + 1) % cards.length;
+        render();
+      } else if (e.key === 'ArrowLeft') {
+        idx = (idx - 1 + cards.length) % cards.length;
+        render();
+      }
+    });
+
+    host.querySelectorAll<HTMLButtonElement>('.btn[data-rate]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const rate = btn.dataset.rate as 'hard' | 'good' | 'easy';
+        const c = cards[idx];
+        const key = `${collection}::${c.id}`;
+        const p = getProgress(storage, key);
+        storage[key] = updateProgress(p, rate);
+        saveStorage(storage);
+        idx = (idx + 1) % cards.length;
+        render();
+      });
+    });
+
+    render();
+  });
+</script>

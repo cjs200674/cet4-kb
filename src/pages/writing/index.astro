@@ -1,0 +1,26 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { getCollection } from 'astro:content';
+
+const entries = await getCollection('writing');
+const base = import.meta.env.BASE_URL;
+---
+
+<Layout title="写作" description="CET-4 作文模板 + 高分范文">
+  <h1>📝 写作</h1>
+  <p class="muted">作文 106.5 分（15%），用模板最稳</p>
+
+  <h2>📋 模板与范文</h2>
+  <div class="card-grid">
+    {entries.map((e) => (
+      <a href={`${base}writing/${e.slug}`} class="card">
+        <h3>{e.data.title}</h3>
+        <div class="card-meta">
+          {e.data.templateType && <span class="tag">{e.data.templateType}</span>}
+          {e.data.band && <span class="tag">范文 {e.data.band} 分</span>}
+        </div>
+        <p class="card-desc">{e.data.description || ''}</p>
+      </a>
+    ))}
+  </div>
+</Layout>

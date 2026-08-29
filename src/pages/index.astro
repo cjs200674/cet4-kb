@@ -1,0 +1,93 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { getCollection } from 'astro:content';
+
+const vocabCount = (await getCollection('vocabulary')).length;
+const readingCount = (await getCollection('reading')).length;
+const listeningCount = (await getCollection('listening')).length;
+const grammarCount = (await getCollection('grammar')).length;
+const writingCount = (await getCollection('writing')).length;
+const total = vocabCount + readingCount + listeningCount + grammarCount + writingCount;
+const base = import.meta.env.BASE_URL;
+---
+
+<Layout title="首页">
+  <section class="hero">
+    <h1>大学英语四级 · 系统化备考</h1>
+    <p>词汇 · 阅读 · 听力 · 语法 · 写作 — Anki 间隔重复 + 刷题 + 进度跟踪，零成本、纯 Markdown、GitHub 托管</p>
+    <div class="hero-stats">
+      <div class="stat">
+        <span class="stat-num">{total}</span>
+        <span class="stat-label">知识条目</span>
+      </div>
+      <div class="stat">
+        <span class="stat-num">5</span>
+        <span class="stat-label">核心模块</span>
+      </div>
+      <div class="stat">
+        <span class="stat-num">100%</span>
+        <span class="stat-label">开源免费</span>
+      </div>
+    </div>
+  </section>
+
+  <h2>📚 开始学习</h2>
+  <div class="card-grid">
+    <a href={`${base}vocabulary`} class="card">
+      <h3>📚 词汇</h3>
+      <div class="card-meta">
+        <span class="tag">{vocabCount} 词</span>
+        <span class="tag tag-medium">重点</span>
+      </div>
+      <p class="card-desc">高频词 + 词组 + 易混词辨析，带 Anki 风格间隔重复卡片，记忆曲线自动安排复习。</p>
+    </a>
+    <a href={`${base}reading`} class="card">
+      <h3>📖 阅读</h3>
+      <div class="card-meta">
+        <span class="tag">{readingCount} 篇</span>
+        <span class="tag tag-medium">分值高</span>
+      </div>
+      <p class="card-desc">考点分析 + 长难句拆解 + 历年真题精讲。阅读占总分 35%。</p>
+    </a>
+    <a href={`${base}listening`} class="card">
+      <h3>🎧 听力</h3>
+      <div class="card-meta">
+        <span class="tag">{listeningCount} 篇</span>
+        <span class="tag tag-medium">25%</span>
+      </div>
+      <p class="card-desc">场景词 + 真题原文 + 听力脚本。听写结合，提升最快。</p>
+    </a>
+    <a href={`${base}grammar`} class="card">
+      <h3>✏️ 语法</h3>
+      <div class="card-meta">
+        <span class="tag">{grammarCount} 专题</span>
+      </div>
+      <p class="card-desc">重点语法 + 易错点辨析。语法是阅读、写作、翻译的底座。</p>
+    </a>
+    <a href={`${base}writing`} class="card">
+      <h3>📝 写作</h3>
+      <div class="card-meta">
+        <span class="tag">{writingCount} 模板</span>
+      </div>
+      <p class="card-desc">万能模板 + 高分范文 + 提分句型。作文用模板最稳。</p>
+    </a>
+    <a href={`${base}progress`} class="card">
+      <h3>📊 进度</h3>
+      <div class="card-meta">
+        <span class="tag">localStorage</span>
+      </div>
+      <p class="card-desc">学习进度仪表盘。已复习多少张卡片、到期复习、刷题正确率、连续学习天数。</p>
+    </a>
+  </div>
+
+  <h2>🛠 使用方法</h2>
+  <ol>
+    <li>从「词汇」开始，浏览词条，点 <strong>简单 / 一般 / 困难</strong> 标记掌握度</li>
+    <li>系统会基于 SM-2 算法自动安排复习时间</li>
+    <li>每篇阅读 / 听力都有配套刷题，做完看解析</li>
+    <li>右上角 <strong>📊 进度</strong> 查看学习数据（仅本机存储）</li>
+  </ol>
+
+  <h2>📝 内容来源</h2>
+  <p>本知识库基于公开的四级真题、词汇书、语法资料整理，由 chu 持续维护。欢迎 PR 新内容或纠错。</p>
+</Layout>

@@ -1,0 +1,53 @@
+---
+export interface Props {
+  title: string;
+  description?: string;
+}
+
+const { title, description = '大学英语四级（CET-4）备考知识库' } = Astro.props;
+const base = import.meta.env.BASE_URL;
+---
+
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href={`${base}favicon.svg`} />
+    <meta name="generator" content={Astro.generator} />
+    <meta name="description" content={description} />
+    <title>{title} | CET-4 备考知识库</title>
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container">
+        <a href={base} class="brand">
+          <span class="brand-icon">📚</span>
+          <span class="brand-text">CET-4 备考</span>
+        </a>
+        <nav class="site-nav">
+          <a href={`${base}vocabulary`}>词汇</a>
+          <a href={`${base}reading`}>阅读</a>
+          <a href={`${base}listening`}>听力</a>
+          <a href={`${base}grammar`}>语法</a>
+          <a href={`${base}writing`}>写作</a>
+          <a href={`${base}progress`} class="nav-progress">📊 进度</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="container">
+      <slot />
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <p>CET-4 KB · Powered by Astro + GitHub Pages · <a href="https://github.com/chu/cet4-kb">源码</a></p>
+      </div>
+    </footer>
+
+    <style is:global>
+      @import '../styles/global.css';
+    </style>
+  </body>
+</html>

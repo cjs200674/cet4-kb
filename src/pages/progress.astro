@@ -1,0 +1,67 @@
+---
+import Layout from '../layouts/Layout.astro';
+import ProgressDashboard from '../components/ProgressDashboard.astro';
+---
+
+<Layout title="学习进度">
+  <h1>📊 学习进度</h1>
+  <p class="muted">所有数据存储在你的浏览器 localStorage，不会上传到任何服务器</p>
+
+  <ProgressDashboard />
+
+  <h2>📅 复习计划建议</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>周期</th>
+        <th>每日任务</th>
+        <th>预计时间</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>第 1-2 月</td>
+        <td>背高频词 50 个 + 精读 2 篇 + 听力 1 套</td>
+        <td>1.5 - 2 小时</td>
+      </tr>
+      <tr>
+        <td>第 3 月</td>
+        <td>真题训练（每周 2 套）+ 错题回顾</td>
+        <td>2 - 2.5 小时</td>
+      </tr>
+      <tr>
+        <td>第 4 月</td>
+        <td>模拟考 + 弱项突击 + 写作模板背诵</td>
+        <td>2 - 3 小时</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>⚙️ 数据管理</h2>
+  <button class="btn" id="export-btn">📤 导出进度数据</button>
+  <button class="btn" id="reset-btn">🗑️ 重置所有进度</button>
+  <pre id="export-output" class="hidden mt-2"></pre>
+
+  <script>
+    document.getElementById('export-btn')?.addEventListener('click', () => {
+      const data = {
+        progress: localStorage.getItem('cet4-progress'),
+        quizStats: localStorage.getItem('cet4-quiz-stats'),
+        streak: localStorage.getItem('cet4-streak'),
+        exportedAt: new Date().toISOString(),
+      };
+      const out = document.getElementById('export-output')!;
+      out.textContent = JSON.stringify(data, null, 2);
+      out.classList.remove('hidden');
+    });
+
+    document.getElementById('reset-btn')?.addEventListener('click', () => {
+      if (confirm('确定要重置所有学习进度？此操作不可恢复。')) {
+        localStorage.removeItem('cet4-progress');
+        localStorage.removeItem('cet4-quiz-stats');
+        localStorage.removeItem('cet4-streak');
+        location.reload();
+      }
+    });
+  </script>
+</Layout>

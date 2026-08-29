@@ -1,0 +1,35 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { getCollection } from 'astro:content';
+
+const entries = await getCollection('listening');
+entries.sort((a, b) => (b.data.year || 0) - (a.data.year || 0));
+const base = import.meta.env.BASE_URL;
+---
+
+<Layout title="听力" description="CET-4 听力，场景词 + 真题原文 + 听力脚本">
+  <h1>🎧 听力</h1>
+  <p class="muted">听力占总分 25%，提分难但提分快</p>
+
+  <h2>🎯 备考策略</h2>
+  <ul>
+    <li><strong>场景词</strong>：图书馆、医院、机场、餐厅、新闻 — 必背高频场景词</li>
+    <li><strong>精听</strong>：听一句写一句，再对照原文（dictation）</li>
+    <li><strong>新闻听力</strong>：BBC / VOA 常速新闻泛听，培养语感</li>
+    <li><strong>真题反复听</strong>：一套真题听 5 遍比做 5 套题更有效</li>
+  </ul>
+
+  <h2>📋 真题样例</h2>
+  <div class="card-grid">
+    {entries.map((e) => (
+      <a href={`${base}listening/${e.slug}`} class="card">
+        <h3>{e.data.title}</h3>
+        <div class="card-meta">
+          {e.data.year && <span class="tag">{e.data.year} 年</span>}
+          {e.data.section && <span class="tag">{e.data.section}</span>}
+        </div>
+        <p class="card-desc">{e.data.description || ''}</p>
+      </a>
+    ))}
+  </div>
+</Layout>
