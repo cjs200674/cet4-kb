@@ -10,18 +10,21 @@ export interface QuizQuestion {
   options: QuizOption[];
   correct: string; // option id
   explain?: string;
+  source?: string; // 错题本回放时用的题源
 }
 
 export interface Props {
   questions: QuizQuestion[];
   title?: string;
+  collection?: string; // 用于错题归类（reading/listening/grammar 等）
+  pageSource?: string; // 当前页面源（用于错题定位）
 }
 
-const { questions, title = '刷题' } = Astro.props;
+const { questions, title = '刷题', collection = 'misc', pageSource = '' } = Astro.props;
 const data = JSON.stringify(questions);
 ---
 
-<div class="quiz-host" data-quiz={data}>
+<div class="quiz-host" data-quiz={data} data-collection={collection} data-source={pageSource}>
   <h3 class="quiz-title">{title}</h3>
   <div class="quiz-body">
     <div class="quiz-meta">
@@ -48,6 +51,8 @@ const data = JSON.stringify(questions);
   document.querySelectorAll<HTMLElement>('.quiz-host').forEach((host) => {
     const questions: Array<any> = JSON.parse(host.dataset.quiz || '[]');
     if (!questions.length) return;
+    const collection = host.dataset.collection || 'misc';
+    const pageSource = host.dataset.source || '';
 
     const body = host.querySelector('.quiz-body')!;
     const result = host.querySelector('.quiz-result')!;
@@ -63,6 +68,44 @@ const data = JSON.stringify(questions);
     const finalAcc = host.querySelector('.final-acc')!;
     const finalCorrect = host.querySelector('.final-correct')!;
     const finalTotal = host.querySelector('.final-total')!;
+
+    // 错题本管理
+    const MISTAKES_KEY = 'cet4-mistakes';
+    const getMistakes = (): Record<string, any> => {
+      try { return JSON.parse(localStorage.getItem(MISTAKES_KEY) || '{}'); } catch { return {}; }
+    };
+    const saveMistakes = (m: Record<string, any>) => {
+      localStorage.setItem(MISTAKES_KEY, JSON.stringify(m));
+      window.dispatchEvent(new CustomEvent('cet4-mistakes-update'));
+    };
+    const recordMistake = (q: any, userAnswer: string) => {
+      const m = getMistakes();
+      const key = `${collection}::${q.id}`;
+      if (m[key]) {
+        m[key].wrongCount = (m[key].wrongCount || 1) + 1;
+        m[key].lastWrongAt = Date.now();
+      } else {
+        m[key] = {
+          id: key,
+          question: q.question,
+          options: q.options,
+          correct: q.correct,
+          explain: q.explain,
+          source: q.source || pageSource,
+          collection,
+          userAnswer,
+          wrongCount: 1,
+          addedAt: Date.now(),
+          lastWrongAt: Date.now(),
+        };
+      }
+      saveMistakes(m);
+    };
+    const removeMistake = (qId: string) => {
+      const m = getMistakes();
+      const key = `${collection}::${qId}`;
+      if (m[key]) { delete m[key]; saveMistakes(m); }
+    };
 
     totalEl.textContent = String(questions.length);
 
@@ -119,6 +162,12 @@ const data = JSON.stringify(questions);
       }
       updateAcc();
       saveProgress();
+      // 错题本：答错加入，答对移出
+      if (isCorrect) {
+        removeMistake(q.id);
+      } else {
+        recordMistake(q, id);
+      }
     }
 
     function updateAcc() {

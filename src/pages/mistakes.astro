@@ -1,0 +1,280 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="错题本" description="CET-4 错题自动收集与重做">
+  <h1>📕 错题本</h1>
+  <p class="muted">所有你刷题时答错的题目都会自动加入这里。答对后自动移除。</p>
+
+  <div class="mistakes-toolbar">
+    <span class="muted">共 <strong id="m-count">0</strong> 道错题</span>
+    <button class="btn" id="m-redo">🔁 重做全部</button>
+    <button class="btn" id="m-export">📤 导出 JSON</button>
+    <button class="btn" id="m-clear">🗑️ 清空</button>
+  </div>
+
+  <div id="m-empty" class="hidden">
+    <p class="dim">🎉 没有错题！继续保持。</p>
+  </div>
+
+  <div id="m-list"></div>
+
+  <div id="m-quiz-host" class="hidden mt-3">
+    <h2>🔁 重做错题</h2>
+    <div class="quiz-body">
+      <div class="quiz-meta">
+        题目 <span class="q-current">1</span> / <span class="q-total">0</span>
+        · 正确率 <span class="q-acc">--</span>
+      </div>
+      <div class="quiz-question q-text"></div>
+      <div class="quiz-options q-opts"></div>
+      <div class="quiz-explain q-explain hidden"></div>
+      <div class="quiz-nav mt-2">
+        <button class="btn q-prev">← 上一题</button>
+        <button class="btn btn-primary q-next">下一题 →</button>
+      </div>
+    </div>
+    <div class="quiz-result hidden">
+      <h3>🎉 重做完成！</h3>
+      <p>本次正确率：<span class="final-acc"></span></p>
+      <p>正确 <span class="final-correct"></span> / 共 <span class="final-total"></span> 题</p>
+      <button class="btn btn-primary q-restart">再来一次</button>
+      <button class="btn q-back-list">← 返回错题列表</button>
+    </div>
+  </div>
+
+  <pre id="m-export-out" class="hidden mt-2"></pre>
+</Layout>
+
+<style>
+  .mistakes-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin: 16px 0;
+    padding: 12px 16px;
+    background: var(--c-bg-soft);
+    border: 1px solid var(--c-border);
+    border-radius: 8px;
+  }
+  .mistake-card {
+    background: var(--c-bg-soft);
+    border: 1px solid var(--c-border);
+    border-radius: 8px;
+    padding: 16px;
+    margin: 10px 0;
+  }
+  .mistake-card-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .mistake-source {
+    font-size: 12px;
+    color: var(--c-text-dim);
+  }
+  .mistake-wrongcount {
+    font-size: 12px;
+    color: var(--c-error);
+    font-weight: 600;
+  }
+  .mistake-q { margin: 8px 0; line-height: 1.5; }
+  .mistake-options { padding-left: 0; list-style: none; }
+  .mistake-options li { margin: 4px 0; }
+  .mistake-options .opt-correct { color: var(--c-accent-2); font-weight: 600; }
+  .mistake-options .opt-user { color: var(--c-error); text-decoration: line-through; }
+  .mistake-explain {
+    margin-top: 8px;
+    padding: 8px 10px;
+    background: var(--c-bg-soft-2);
+    border-left: 3px solid var(--c-accent);
+    border-radius: 0 6px 6px 0;
+    font-size: 14px;
+    color: var(--c-text-soft);
+  }
+</style>
+
+<script>
+  const MISTAKES_KEY = 'cet4-mistakes';
+  const listEl = document.getElementById('m-list')!;
+  const emptyEl = document.getElementById('m-empty')!;
+  const countEl = document.getElementById('m-count')!;
+  const redoBtn = document.getElementById('m-redo')!;
+  const clearBtn = document.getElementById('m-clear')!;
+  const exportBtn = document.getElementById('m-export')!;
+  const exportOut = document.getElementById('m-export-out')!;
+  const quizHost = document.getElementById('m-quiz-host')!;
+
+  function load(): Record<string, any> {
+    try { return JSON.parse(localStorage.getItem(MISTAKES_KEY) || '{}'); } catch { return {}; }
+  }
+
+  function render() {
+    const m = load();
+    const items = Object.values(m).sort((a: any, b: any) => (b.lastWrongAt || 0) - (a.lastWrongAt || 0));
+    countEl.textContent = String(items.length);
+    if (items.length === 0) {
+      emptyEl.classList.remove('hidden');
+      listEl.innerHTML = '';
+      return;
+    }
+    emptyEl.classList.add('hidden');
+    listEl.innerHTML = items.map((item: any) => `
+      <div class="mistake-card" data-id="${item.id}">
+        <div class="mistake-card-head">
+          <span class="mistake-source">📂 ${item.source || '未分类'} · ${item.collection || 'misc'}</span>
+          <span class="mistake-wrongcount">错 ${item.wrongCount} 次</span>
+        </div>
+        <div class="mistake-q"><strong>Q:</strong> ${item.question}</div>
+        <ul class="mistake-options">
+          ${item.options.map((o: any) => {
+            let cls = '';
+            if (o.id === item.correct) cls = 'opt-correct';
+            else if (o.id === item.userAnswer) cls = 'opt-user';
+            return `<li class="${cls}">${o.id}. ${o.text}</li>`;
+          }).join('')}
+        </ul>
+        ${item.explain ? `<div class="mistake-explain">${item.explain}</div>` : ''}
+        <div class="mt-2">
+          <button class="btn btn-sm m-remove" data-id="${item.id}">✓ 标记掌握（从错题本移除）</button>
+        </div>
+      </div>
+    `).join('');
+
+    listEl.querySelectorAll<HTMLButtonElement>('.m-remove').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.id!;
+        const m = load();
+        if (m[id]) {
+          delete m[id];
+          localStorage.setItem(MISTAKES_KEY, JSON.stringify(m));
+          render();
+          window.dispatchEvent(new CustomEvent('cet4-mistakes-update'));
+        }
+      });
+    });
+  }
+
+  // 重做
+  let redoIdx = 0;
+  let redoAnswers: Record<number, string> = {};
+  let redoCorrect = 0;
+  let redoQuestions: any[] = [];
+
+  function startRedo() {
+    const m = load();
+    redoQuestions = Object.values(m);
+    if (redoQuestions.length === 0) { alert('错题本是空的'); return; }
+    redoIdx = 0;
+    redoAnswers = {};
+    redoCorrect = 0;
+    quizHost.classList.remove('hidden');
+    quizHost.querySelector('.quiz-body')!.classList.remove('hidden');
+    quizHost.querySelector('.quiz-result')!.classList.add('hidden');
+    (quizHost.querySelector('.q-total') as HTMLElement).textContent = String(redoQuestions.length);
+    renderRedo();
+    quizHost.scrollIntoView({ behavior: 'smooth' });
+  }
+
+  function renderRedo() {
+    const q = redoQuestions[redoIdx];
+    (quizHost.querySelector('.q-current') as HTMLElement).textContent = String(redoIdx + 1);
+    (quizHost.querySelector('.q-text') as HTMLElement).innerHTML = q.question;
+    const optsEl = quizHost.querySelector('.q-opts') as HTMLElement;
+    optsEl.innerHTML = '';
+    const explainEl = quizHost.querySelector('.q-explain') as HTMLElement;
+    explainEl.classList.add('hidden');
+    explainEl.innerHTML = '';
+    q.options.forEach((o: any) => {
+      const b = document.createElement('button');
+      b.className = 'quiz-option';
+      b.textContent = `${o.id}. ${o.text}`;
+      b.dataset.id = o.id;
+      b.addEventListener('click', () => handleRedoAnswer(o.id, b));
+      optsEl.appendChild(b);
+    });
+    if (redoAnswers[redoIdx]) {
+      const saved = redoAnswers[redoIdx];
+      optsEl.querySelectorAll<HTMLButtonElement>('.quiz-option').forEach((b) => {
+        b.disabled = true;
+        if (b.dataset.id === q.correct) b.classList.add('correct');
+        else if (b.dataset.id === saved) b.classList.add('wrong');
+      });
+      if (q.explain) {
+        explainEl.classList.remove('hidden');
+        explainEl.innerHTML = `<strong>解析：</strong>${q.explain}`;
+      }
+    }
+    (quizHost.querySelector('.q-prev') as HTMLButtonElement).toggleAttribute('disabled', redoIdx === 0);
+  }
+
+  function handleRedoAnswer(id: string, btn: HTMLButtonElement) {
+    if (redoAnswers[redoIdx] !== undefined) return;
+    const q = redoQuestions[redoIdx];
+    redoAnswers[redoIdx] = id;
+    const isCorrect = id === q.correct;
+    if (isCorrect) redoCorrect++;
+    quizHost.querySelectorAll<HTMLButtonElement>('.quiz-option').forEach((b) => {
+      b.disabled = true;
+      if (b.dataset.id === q.correct) b.classList.add('correct');
+      else if (b === btn) b.classList.add('wrong');
+    });
+    if (q.explain) {
+      const explainEl = quizHost.querySelector('.q-explain') as HTMLElement;
+      explainEl.classList.remove('hidden');
+      explainEl.innerHTML = `<strong>解析：</strong>${q.explain}`;
+    }
+    // 答对从错题本移除
+    if (isCorrect) {
+      const m = load();
+      if (m[q.id]) {
+        delete m[q.id];
+        localStorage.setItem(MISTAKES_KEY, JSON.stringify(m));
+        window.dispatchEvent(new CustomEvent('cet4-mistakes-update'));
+        render();
+      }
+    }
+  }
+
+  redoBtn.addEventListener('click', startRedo);
+  quizHost.querySelector('.q-prev')!.addEventListener('click', () => {
+    if (redoIdx > 0) { redoIdx--; renderRedo(); }
+  });
+  quizHost.querySelector('.q-next')!.addEventListener('click', () => {
+    if (redoIdx < redoQuestions.length - 1) { redoIdx++; renderRedo(); }
+    else {
+      const acc = Math.round((redoCorrect / redoQuestions.length) * 100);
+      (quizHost.querySelector('.final-acc') as HTMLElement).textContent = `${acc}%`;
+      (quizHost.querySelector('.final-correct') as HTMLElement).textContent = String(redoCorrect);
+      (quizHost.querySelector('.final-total') as HTMLElement).textContent = String(redoQuestions.length);
+      quizHost.querySelector('.quiz-body')!.classList.add('hidden');
+      quizHost.querySelector('.quiz-result')!.classList.remove('hidden');
+    }
+  });
+  quizHost.querySelector('.q-restart')!.addEventListener('click', startRedo);
+  quizHost.querySelector('.q-back-list')!.addEventListener('click', () => {
+    quizHost.classList.add('hidden');
+    render();
+  });
+
+  clearBtn.addEventListener('click', () => {
+    if (confirm('确定要清空所有错题？此操作不可恢复。')) {
+      localStorage.removeItem(MISTAKES_KEY);
+      render();
+      window.dispatchEvent(new CustomEvent('cet4-mistakes-update'));
+    }
+  });
+
+  exportBtn.addEventListener('click', () => {
+    const data = localStorage.getItem(MISTAKES_KEY) || '{}';
+    exportOut.textContent = JSON.stringify(JSON.parse(data), null, 2);
+    exportOut.classList.remove('hidden');
+  });
+
+  render();
+  window.addEventListener('cet4-mistakes-update', render);
+</script>

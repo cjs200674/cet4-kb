@@ -1,5 +1,7 @@
 ---
 import Layout from '../../layouts/Layout.astro';
+import SpeakButton from '../../components/SpeakButton.astro';
+import Quiz from '../../components/Quiz.astro';
 import { getCollection } from 'astro:content';
 
 export async function getStaticPaths() {
@@ -9,7 +11,314 @@ export async function getStaticPaths() {
 
 const { entry } = Astro.props;
 const { Content } = await entry.render();
-const base = import.meta.env.BASE_URL;
+const base = (import.meta.env.BASE_URL || "/").replace(/\/?$/, "/");
+
+// 为不同听力提供对应的刷题
+const quizByEntry: Record<string, any> = {
+  'scenes-vocabulary': {
+    title: '听力场景词测验',
+    collection: 'listening',
+    pageSource: '听力场景词',
+    questions: [
+      {
+        id: 'sv-1',
+        question: '"I need to renew my library book" — "renew" 在这个语境下最接近：',
+        options: [
+          { id: 'A', text: '归还' },
+          { id: 'B', text: '续借' },
+          { id: 'C', text: '购买' },
+          { id: 'D', text: '借出' },
+        ],
+        correct: 'B',
+        explain: 'renew 在图书馆场景中是"续借"，renew 也有"更新、续期"的意思。',
+      },
+      {
+        id: 'sv-2',
+        question: '在餐厅场景，顾客对服务员说 "Could I have the check, please?"，意思是：',
+        options: [
+          { id: 'A', text: '点菜' },
+          { id: 'B', text: '买单' },
+          { id: 'C', text: '换桌' },
+          { id: 'D', text: '催菜' },
+        ],
+        correct: 'B',
+        explain: 'check 在美式英语中是"账单"，英式英语常用 bill。Could I have the check? = 我可以结账吗？',
+      },
+      {
+        id: 'sv-3',
+        question: '在机场听到 "Your flight has been delayed" — "delayed" 意思是：',
+        options: [
+          { id: 'A', text: '取消' },
+          { id: 'B', text: '延误' },
+          { id: 'C', text: '提前' },
+          { id: 'D', text: '改签' },
+        ],
+        correct: 'B',
+        explain: 'delay = 延误。delayed flight = 延误航班。',
+      },
+    ],
+  },
+  'dictation-guide': {
+    title: '精听方法测验',
+    collection: 'listening',
+    pageSource: '听力精听方法',
+    questions: [
+      {
+        id: 'dg-1',
+        question: '5 步精听法的第一步是：',
+        options: [
+          { id: 'A', text: '看原文' },
+          { id: 'B', text: '盲听一遍' },
+          { id: 'C', text: '跟读' },
+          { id: 'D', text: '脱稿复听' },
+        ],
+        correct: 'B',
+        explain: '5 步精听法：①盲听 ②听写 ③对照原文 ④跟读 ⑤脱稿复听。第一步是不看原文盲听。',
+      },
+      {
+        id: 'dg-2',
+        question: '英语听力中常见的失爆现象是指：',
+        options: [
+          { id: 'A', text: '声音消失' },
+          { id: 'B', text: '前一个爆破音只做口型不送气' },
+          { id: 'C', text: '语音变调' },
+          { id: 'D', text: '语速变慢' },
+        ],
+        correct: 'B',
+        explain: '失爆：爆破音 + 爆破音时，前一个爆破音只做口型不送气。例：sit down → si-(t)down',
+      },
+    ],
+  },
+  'news-headlines': {
+    title: '新闻听力测验',
+    collection: 'listening',
+    pageSource: '新闻听力',
+    questions: [
+      {
+        id: 'nh-1',
+        question: '听到 "according to officials" 后面通常跟：',
+        options: [
+          { id: 'A', text: '个人观点' },
+          { id: 'B', text: '官方说法' },
+          { id: 'C', text: '天气情况' },
+          { id: 'D', text: '体育比分' },
+        ],
+        correct: 'B',
+        explain: 'according to officials = 据官方人士称。新闻听力开头常见结构。',
+      },
+      {
+        id: 'nh-2',
+        question: '听到 "magnitude 6.5" 在新闻中通常指：',
+        options: [
+          { id: 'A', text: '经济损失 6.5 亿' },
+          { id: 'B', text: '地震 6.5 级' },
+          { id: 'C', text: '风速 6.5 级' },
+          { id: 'D', text: '失业率 6.5%' },
+        ],
+        correct: 'B',
+        explain: 'magnitude 专指地震震级。magnitude 6.5 = 里氏 6.5 级地震。',
+      },
+    ],
+  },
+  '2023-12-section-a': {
+    title: '2023-12 长对话 刷题',
+    collection: 'listening',
+    pageSource: '2023-12 长对话',
+    questions: [
+      {
+        id: '23-12-sa-1',
+        question: '女学生借了几本书？',
+        options: [
+          { id: 'A', text: '一本' },
+          { id: 'B', text: '两本' },
+          { id: 'C', text: '三本' },
+          { id: 'D', text: '四本' },
+        ],
+        correct: 'C',
+        explain: "原文 \"I'd like to borrow these three books\"。",
+      },
+      {
+        id: '23-12-sa-2',
+        question: '新书能借多久？',
+        options: [
+          { id: 'A', text: '两天' },
+          { id: 'B', text: '一周' },
+          { id: 'C', text: '两周' },
+          { id: 'D', text: '一个月' },
+        ],
+        correct: 'B',
+        explain: '原文 "for new books, only one week"。',
+      },
+      {
+        id: '23-12-sa-3',
+        question: '考试期间图书馆开放到几点？',
+        options: [
+          { id: 'A', text: '晚上 8 点' },
+          { id: 'B', text: '晚上 10 点' },
+          { id: 'C', text: '晚上 12 点' },
+          { id: 'D', text: '凌晨 2 点' },
+        ],
+        correct: 'C',
+        explain: '原文 "We extend our hours to midnight during exams"。',
+      },
+      {
+        id: '23-12-sa-4',
+        question: '24 小时自习室在哪层？',
+        options: [
+          { id: 'A', text: '一楼' },
+          { id: 'B', text: '二楼' },
+          { id: 'C', text: '三楼' },
+          { id: 'D', text: '四楼' },
+        ],
+        correct: 'C',
+        explain: '原文 "a 24-hour study room on the third floor"。',
+      },
+      {
+        id: '23-12-sa-5',
+        question: '逾期还书的费用是多少？',
+        options: [
+          { id: 'A', text: '每本每天 10 美分' },
+          { id: 'B', text: '每本每天 50 美分' },
+          { id: 'C', text: '每本每天 1 美元' },
+          { id: 'D', text: '免费' },
+        ],
+        correct: 'B',
+        explain: '原文 "50 cents per day per book"。',
+      },
+    ],
+  },
+  '2023-06-section-b': {
+    title: '2023-06 听力篇章 刷题',
+    collection: 'listening',
+    pageSource: '2023-06 听力篇章',
+    questions: [
+      {
+        id: '23-06-sb-1',
+        question: '远程办公最初被看作什么？',
+        options: [
+          { id: 'A', text: '永久趋势' },
+          { id: 'B', text: '临时措施' },
+          { id: 'C', text: '工作福利' },
+          { id: 'D', text: '企业文化' },
+        ],
+        correct: 'B',
+        explain: '原文 "initially seen as a temporary measure"。',
+      },
+      {
+        id: '23-06-sb-2',
+        question: '远程办公的三个优点不包括：',
+        options: [
+          { id: 'A', text: '节省通勤时间' },
+          { id: 'B', text: '工作生活更平衡' },
+          { id: 'C', text: '更高的生产力' },
+          { id: 'D', text: '更多团队协作' },
+        ],
+        correct: 'D',
+        explain: '原文优点是 First(节省通勤) Second(工作生活平衡) Third(生产力)，没提"团队协作"。',
+      },
+      {
+        id: '23-06-sb-3',
+        question: '远程办公的缺点之一是：',
+        options: [
+          { id: 'A', text: '工资低' },
+          { id: 'B', text: '网络慢' },
+          { id: 'C', text: '孤独感' },
+          { id: 'D', text: '工作时间长但压力大' },
+        ],
+        correct: 'C',
+        explain: '原文 "Many workers report feelings of isolation"。',
+      },
+      {
+        id: '23-06-sb-4',
+        question: '未来办公模式最可能是：',
+        options: [
+          { id: 'A', text: '完全远程' },
+          { id: 'B', text: '完全回办公室' },
+          { id: 'C', text: '混合办公' },
+          { id: 'D', text: '自由选择' },
+        ],
+        correct: 'C',
+        explain: '原文 "a hybrid model appears to be the most likely future of work"。',
+      },
+    ],
+  },
+  '2022-12-section-c': {
+    title: '2022-12 新闻 刷题',
+    collection: 'listening',
+    pageSource: '2022-12 新闻',
+    questions: [
+      {
+        id: '22-12-sc-1',
+        question: 'Perseverance 2 计划何时发射？',
+        options: [
+          { id: 'A', text: '2022 年' },
+          { id: 'B', text: '2025 年' },
+          { id: 'C', text: '2027 年' },
+          { id: 'D', text: '2030 年' },
+        ],
+        correct: 'C',
+        explain: '原文 "scheduled to launch in 2027"。',
+      },
+      {
+        id: '22-12-sc-2',
+        question: '火星任务预计耗资多少？',
+        options: [
+          { id: 'A', text: '27 亿美元' },
+          { id: 'B', text: '2.7 亿美元' },
+          { id: 'C', text: '2.7 亿美元' },
+          { id: 'D', text: '270 万美元' },
+        ],
+        correct: 'A',
+        explain: '原文 "approximately 2.7 billion dollars"。2.7 billion = 27 亿。',
+      },
+      {
+        id: '22-12-sc-3',
+        question: '气候峰会在哪里召开？',
+        options: [
+          { id: 'A', text: '巴黎' },
+          { id: 'B', text: '日内瓦' },
+          { id: 'C', text: '纽约' },
+          { id: 'D', text: '伦敦' },
+        ],
+        correct: 'B',
+        explain: '原文 "World leaders gathered in Geneva"。',
+      },
+      {
+        id: '22-12-sc-4',
+        question: '关于痴呆症研究，正确的说法是：',
+        options: [
+          { id: 'A', text: '运动增加风险' },
+          { id: 'B', text: '每天 30 分钟运动可降低 40% 风险' },
+          { id: 'C', text: '只对年轻人有效' },
+          { id: 'D', text: '研究只持续了 1 年' },
+        ],
+        correct: 'B',
+        explain: '原文 "30 minutes a day were 40% less likely to develop the condition"。',
+      },
+    ],
+  },
+};
+
+const quizData = quizByEntry[entry.slug] || null;
+
+// 提取 body 文本用于 TTS（去掉 markdown 标记）
+function extractText(markdown: string): string {
+  return markdown
+    .replace(/^---[\s\S]*?---/, '') // 去掉 frontmatter
+    .replace(/```[\s\S]*?```/g, '') // 去掉代码块
+    .replace(/^#+\s*/gm, '') // 去掉标题
+    .replace(/\*\*([^*]+)\*\*/g, '$1') // 去掉粗体
+    .replace(/\*([^*]+)\*/g, '$1') // 去掉斜体
+    .replace(/`([^`]+)`/g, '$1') // 去掉行内代码
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // 去掉链接
+    .replace(/^[-*+]\s+/gm, '') // 去掉列表符
+    .replace(/\n{2,}/g, '\n') // 合并空行
+    .replace(/[<>]/g, '') // 去掉残留
+    .trim();
+}
+
+// entry.body 不可直接访问，用 Content 不行 — 我们需要 entry 的 markdown 原文
+// Astro 5 提供 entry.body 字段吗？用 render() 的 markdown 字段更稳
 ---
 
 <Layout title={entry.data.title} description={entry.data.description}>
@@ -20,6 +329,94 @@ const base = import.meta.env.BASE_URL;
       {entry.data.year && <span class="tag">{entry.data.year} 年</span>}
       {entry.data.section && <span class="tag">{entry.data.section}</span>}
     </div>
+
     <Content />
   </article>
+
+  {quizData && (
+    <section class="mt-3">
+      <Quiz
+        questions={quizData.questions}
+        title={quizData.title}
+        collection={quizData.collection}
+        pageSource={quizData.pageSource}
+      />
+    </section>
+  )}
+
+  <script define:vars={{ slug: entry.slug, body: entry.body || '' }}>
+    // 拿到 entry 的 markdown body 后动态挂 TTS 按钮
+    const articleEl = document.querySelector('article');
+    if (articleEl && body) {
+      // 提取纯文本（粗略处理）
+      const tmp = document.createElement('div');
+      tmp.innerHTML = body
+        .replace(/```[\s\S]*?```/g, '')
+        .replace(/[#*`>]/g, '')
+        .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+        .replace(/^---[\s\S]*?---/, '');
+      const text = tmp.textContent || '';
+      // 创建一个浮动工具栏
+      const toolbar = document.createElement('div');
+      toolbar.className = 'speak-toolbar';
+      toolbar.innerHTML = `
+        <button class="btn speak-all-btn" data-state="idle" style="background: var(--c-accent); color: #000; border-color: var(--c-accent); font-weight: 600;">
+          <span class="speak-all-icon">▶</span>
+          <span class="speak-all-label">朗读整篇原文</span>
+        </button>
+        <button class="btn speak-stop-btn" style="display:none;">⏹ 停止</button>
+        <span class="speak-hint dim">提示：用浏览器内置语音引擎，建议用 Chrome/Edge</span>
+      `;
+      articleEl.insertBefore(toolbar, articleEl.firstChild);
+
+      const playBtn = toolbar.querySelector('.speak-all-btn')!;
+      const stopBtn = toolbar.querySelector('.speak-stop-btn')!;
+      const iconEl = playBtn.querySelector('.speak-all-icon')!;
+      const labelEl = playBtn.querySelector('.speak-all-label')!;
+      let isPlaying = false;
+
+      function setState(s) {
+        if (s === 'playing') {
+          playBtn.style.display = 'none';
+          stopBtn.style.display = 'inline-block';
+        } else {
+          playBtn.style.display = 'inline-block';
+          stopBtn.style.display = 'none';
+        }
+      }
+
+      playBtn.addEventListener('click', () => {
+        window.speechSynthesis.cancel();
+        const u = new SpeechSynthesisUtterance(text);
+        u.rate = 0.9;
+        u.lang = 'en-US';
+        u.onend = () => { isPlaying = false; setState('idle'); };
+        u.onerror = () => { isPlaying = false; setState('idle'); };
+        window.speechSynthesis.speak(u);
+        isPlaying = true;
+        setState('playing');
+      });
+
+      stopBtn.addEventListener('click', () => {
+        window.speechSynthesis.cancel();
+        isPlaying = false;
+        setState('idle');
+      });
+    }
+  </script>
+
+  <style>
+    .speak-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin: 0 0 16px;
+      padding: 12px;
+      background: var(--c-bg-soft);
+      border: 1px solid var(--c-border);
+      border-radius: 8px;
+    }
+    .speak-hint { font-size: 12px; }
+  </style>
 </Layout>

@@ -1,0 +1,74 @@
+---
+// TTS 朗读按钮：用浏览器内置 speechSynthesis 朗读文本
+export interface Props {
+  text: string;        // 要朗读的文本
+  rate?: number;       // 语速 0.1-10，默认 0.9
+  pitch?: number;      // 音调 0-2，默认 1
+  lang?: string;       // 语言，默认 en-US
+  label?: string;      // 按钮文字
+}
+
+const { text, rate = 0.9, pitch = 1, lang = 'en-US', label = '▶ 朗读' } = Astro.props;
+const cfg = JSON.stringify({ text, rate, pitch, lang });
+---
+
+<button
+  class="btn speak-btn"
+  data-speak={cfg}
+  data-state="idle"
+>
+  <span class="speak-icon">▶</span>
+  <span class="speak-label">{label}</span>
+</button>
+
+<script>
+  document.querySelectorAll<HTMLButtonElement>('.speak-btn').forEach((btn) => {
+    const cfg = JSON.parse(btn.dataset.speak || '{}');
+    const iconEl = btn.querySelector('.speak-icon')!;
+    const labelEl = btn.querySelector('.speak-label')!;
+    let utter: SpeechSynthesisUtterance | null = null;
+    let isPlaying = false;
+
+    function setState(s: 'idle' | 'playing') {
+      btn.dataset.state = s;
+      if (s === 'playing') {
+        iconEl.textContent = '⏸';
+        labelEl.textContent = '停止';
+        btn.classList.add('btn-playing');
+      } else {
+        iconEl.textContent = '▶';
+        labelEl.textContent = cfg.label || '▶ 朗读';
+        btn.classList.remove('btn-playing');
+      }
+    }
+
+    btn.addEventListener('click', () => {
+      if (isPlaying) {
+        window.speechSynthesis.cancel();
+        isPlaying = false;
+        setState('idle');
+        return;
+      }
+      // 停止其他正在播放的
+      window.speechSynthesis.cancel();
+
+      utter = new SpeechSynthesisUtterance(cfg.text);
+      utter.rate = cfg.rate;
+      utter.pitch = cfg.pitch;
+      utter.lang = cfg.lang;
+      utter.onend = () => { isPlaying = false; setState('idle'); };
+      utter.onerror = () => { isPlaying = false; setState('idle'); };
+      window.speechSynthesis.speak(utter);
+      isPlaying = true;
+      setState('playing');
+    });
+  });
+</script>
+
+<style>
+  .speak-btn.btn-playing {
+    background: var(--c-warning);
+    color: #000;
+    border-color: var(--c-warning);
+  }
+</style>

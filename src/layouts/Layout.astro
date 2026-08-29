@@ -31,6 +31,7 @@ const base = (import.meta.env.BASE_URL || "/").replace(/\/?$/, "/");
           <a href={`${base}listening`}>听力</a>
           <a href={`${base}grammar`}>语法</a>
           <a href={`${base}writing`}>写作</a>
+          <a href={`${base}mistakes`} class="nav-mistakes">📕 错题 <span id="nav-mistake-count" class="nav-badge hidden">0</span></a>
           <a href={`${base}progress`} class="nav-progress">📊 进度</a>
         </nav>
       </div>
@@ -48,6 +49,35 @@ const base = (import.meta.env.BASE_URL || "/").replace(/\/?$/, "/");
 
     <style is:global>
       @import '../styles/global.css';
+
+      .nav-mistakes { color: var(--c-error) !important; }
+      .nav-badge {
+        display: inline-block;
+        background: var(--c-error);
+        color: #fff;
+        font-size: 11px;
+        padding: 1px 6px;
+        border-radius: 10px;
+        margin-left: 4px;
+        font-weight: 700;
+      }
     </style>
+
+    <script>
+      // 错题本数量角标
+      function updateMistakeBadge() {
+        try {
+          const m = JSON.parse(localStorage.getItem('cet4-mistakes') || '{}');
+          const count = Object.keys(m).length;
+          const badge = document.getElementById('nav-mistake-count');
+          if (badge) {
+            badge.textContent = String(count);
+            badge.classList.toggle('hidden', count === 0);
+          }
+        } catch {}
+      }
+      updateMistakeBadge();
+      window.addEventListener('cet4-mistakes-update', updateMistakeBadge);
+    </script>
   </body>
 </html>
