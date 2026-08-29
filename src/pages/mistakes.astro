@@ -7,20 +7,39 @@ import Layout from '../layouts/Layout.astro';
   <p class="muted">所有你刷题时答错的题目都会自动加入这里。答对后自动移除。</p>
 
   <div class="mistakes-toolbar">
-    <span class="muted">共 <strong id="m-count">0</strong> 道错题</span>
+    <span class="muted">共 <strong id="m-count">0</strong> 道</span>
+    <span class="m-stat">
+      🔥 重点 <strong id="m-hard-count">0</strong>（错 3+ 次）
+    </span>
+    <span class="m-stat">
+      🆕 新增 <strong id="m-new-count">0</strong>（近 7 天）
+    </span>
+    <select class="btn" id="m-sort">
+      <option value="time">按最近错误时间</option>
+      <option value="count">按错误次数</option>
+      <option value="alpha">按字母序</option>
+    </select>
+    <button class="btn btn-primary" id="m-redo-hard">🔥 重点复习</button>
     <button class="btn" id="m-redo">🔁 重做全部</button>
-    <button class="btn" id="m-export">📤 导出 JSON</button>
+    <button class="btn" id="m-export">📤 导出</button>
     <button class="btn" id="m-clear">🗑️ 清空</button>
+  </div>
+
+  <div id="m-hard-section" class="hidden">
+    <h2 class="m-section-title">🔥 重点复习（错 3 次以上）</h2>
+    <div id="m-hard-list"></div>
   </div>
 
   <div id="m-empty" class="hidden">
     <p class="dim">🎉 没有错题！继续保持。</p>
   </div>
 
+  <h2 id="m-all-title" class="m-section-title">📋 全部错题</h2>
   <div id="m-list"></div>
 
   <div id="m-quiz-host" class="hidden mt-3">
-    <h2>🔁 重做错题</h2>
+    <h2>🔁 错题重做</h2>
+    <p class="dim" id="m-quiz-mode">模式：全部错题</p>
     <div class="quiz-body">
       <div class="quiz-meta">
         题目 <span class="q-current">1</span> / <span class="q-total">0</span>
@@ -37,7 +56,7 @@ import Layout from '../layouts/Layout.astro';
     <div class="quiz-result hidden">
       <h3>🎉 重做完成！</h3>
       <p>本次正确率：<span class="final-acc"></span></p>
-      <p>正确 <span class="final-correct"></span> / 共 <span class="final-total"></span> 题</p>
+      <p>正确 <span class="final-correct"></span> / 共 <span class="final-total"></span> 题 · 答对自动从错题本移除</p>
       <button class="btn btn-primary q-restart">再来一次</button>
       <button class="btn q-back-list">← 返回错题列表</button>
     </div>
@@ -58,12 +77,52 @@ import Layout from '../layouts/Layout.astro';
     border: 1px solid var(--c-border);
     border-radius: 8px;
   }
+  .m-stat {
+    color: var(--c-text-soft);
+    font-size: 14px;
+  }
+  .m-stat strong {
+    color: var(--c-warning);
+    font-weight: 700;
+  }
+  #m-sort {
+    background: var(--c-bg-soft-2);
+    color: var(--c-text);
+    border: 1px solid var(--c-border);
+    padding: 6px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  .m-section-title {
+    margin-top: 24px;
+    margin-bottom: 12px;
+    color: var(--c-text);
+    border-bottom: 1px solid var(--c-border);
+    padding-bottom: 8px;
+  }
   .mistake-card {
     background: var(--c-bg-soft);
     border: 1px solid var(--c-border);
     border-radius: 8px;
     padding: 16px;
     margin: 10px 0;
+    position: relative;
+  }
+  .mistake-card.is-hard {
+    border-color: var(--c-error);
+    background: rgba(248, 81, 73, 0.05);
+  }
+  .mistake-card.is-new::before {
+    content: 'NEW';
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: var(--c-accent);
+    color: #0d1117;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 4px;
   }
   .mistake-card-head {
     display: flex;
@@ -81,6 +140,12 @@ import Layout from '../layouts/Layout.astro';
     font-size: 12px;
     color: var(--c-error);
     font-weight: 600;
+  }
+  .mistake-wrongcount.is-hard {
+    background: var(--c-error);
+    color: #fff;
+    padding: 2px 8px;
+    border-radius: 4px;
   }
   .mistake-q { margin: 8px 0; line-height: 1.5; }
   .mistake-options { padding-left: 0; list-style: none; }
@@ -100,63 +165,119 @@ import Layout from '../layouts/Layout.astro';
 
 <script>
   const MISTAKES_KEY = 'cet4-mistakes';
+  const HARD_THRESHOLD = 3;
+  const NEW_DAYS = 7;
+
   const listEl = document.getElementById('m-list')!;
+  const hardListEl = document.getElementById('m-hard-list')!;
+  const hardSection = document.getElementById('m-hard-section')!;
   const emptyEl = document.getElementById('m-empty')!;
   const countEl = document.getElementById('m-count')!;
+  const hardCountEl = document.getElementById('m-hard-count')!;
+  const newCountEl = document.getElementById('m-new-count')!;
+  const sortEl = document.getElementById('m-sort') as HTMLSelectElement;
   const redoBtn = document.getElementById('m-redo')!;
+  const redoHardBtn = document.getElementById('m-redo-hard')!;
   const clearBtn = document.getElementById('m-clear')!;
   const exportBtn = document.getElementById('m-export')!;
   const exportOut = document.getElementById('m-export-out')!;
   const quizHost = document.getElementById('m-quiz-host')!;
+  const quizMode = document.getElementById('m-quiz-mode')!;
+  const allTitle = document.getElementById('m-all-title')!;
 
   function load(): Record<string, any> {
     try { return JSON.parse(localStorage.getItem(MISTAKES_KEY) || '{}'); } catch { return {}; }
   }
 
+  function isNew(ts: number): boolean {
+    if (!ts) return false;
+    return (Date.now() - ts) < NEW_DAYS * 24 * 60 * 60 * 1000;
+  }
+
   function render() {
     const m = load();
-    const items = Object.values(m).sort((a: any, b: any) => (b.lastWrongAt || 0) - (a.lastWrongAt || 0));
-    countEl.textContent = String(items.length);
-    if (items.length === 0) {
+    const all = Object.values(m);
+    const hard = all.filter((x: any) => (x.wrongCount || 0) >= HARD_THRESHOLD);
+    const newOnes = all.filter((x: any) => isNew(x.lastWrongAt || x.addedAt));
+
+    countEl.textContent = String(all.length);
+    hardCountEl.textContent = String(hard.length);
+    newCountEl.textContent = String(newOnes.length);
+
+    if (all.length === 0) {
       emptyEl.classList.remove('hidden');
+      hardSection.classList.add('hidden');
       listEl.innerHTML = '';
+      allTitle.classList.add('hidden');
       return;
     }
     emptyEl.classList.add('hidden');
-    listEl.innerHTML = items.map((item: any) => `
-      <div class="mistake-card" data-id="${item.id}">
-        <div class="mistake-card-head">
-          <span class="mistake-source">📂 ${item.source || '未分类'} · ${item.collection || 'misc'}</span>
-          <span class="mistake-wrongcount">错 ${item.wrongCount} 次</span>
-        </div>
-        <div class="mistake-q"><strong>Q:</strong> ${item.question}</div>
-        <ul class="mistake-options">
-          ${item.options.map((o: any) => {
-            let cls = '';
-            if (o.id === item.correct) cls = 'opt-correct';
-            else if (o.id === item.userAnswer) cls = 'opt-user';
-            return `<li class="${cls}">${o.id}. ${o.text}</li>`;
-          }).join('')}
-        </ul>
-        ${item.explain ? `<div class="mistake-explain">${item.explain}</div>` : ''}
-        <div class="mt-2">
-          <button class="btn btn-sm m-remove" data-id="${item.id}">✓ 标记掌握（从错题本移除）</button>
-        </div>
-      </div>
-    `).join('');
+    allTitle.classList.remove('hidden');
 
-    listEl.querySelectorAll<HTMLButtonElement>('.m-remove').forEach((btn) => {
+    // 重点复习区
+    if (hard.length > 0) {
+      hardSection.classList.remove('hidden');
+      hardListEl.innerHTML = renderItems(hard, 'is-hard');
+    } else {
+      hardSection.classList.add('hidden');
+    }
+
+    // 全部区
+    const sortKey = sortEl.value;
+    let sorted = [...all];
+    if (sortKey === 'time') {
+      sorted.sort((a: any, b: any) => (b.lastWrongAt || 0) - (a.lastWrongAt || 0));
+    } else if (sortKey === 'count') {
+      sorted.sort((a: any, b: any) => (b.wrongCount || 0) - (a.wrongCount || 0));
+    } else if (sortKey === 'alpha') {
+      sorted.sort((a: any, b: any) => String(a.question).localeCompare(String(b.question)));
+    }
+    listEl.innerHTML = renderItems(sorted, '');
+
+    // 绑定移除按钮
+    document.querySelectorAll<HTMLButtonElement>('.m-remove').forEach((btn) => {
       btn.addEventListener('click', () => {
         const id = btn.dataset.id!;
-        const m = load();
-        if (m[id]) {
-          delete m[id];
-          localStorage.setItem(MISTAKES_KEY, JSON.stringify(m));
+        const mm = load();
+        if (mm[id]) {
+          delete mm[id];
+          localStorage.setItem(MISTAKES_KEY, JSON.stringify(mm));
           render();
           window.dispatchEvent(new CustomEvent('cet4-mistakes-update'));
         }
       });
     });
+  }
+
+  function renderItems(items: any[], extraClass: string): string {
+    return items.map((item: any) => {
+      const isHard = (item.wrongCount || 0) >= HARD_THRESHOLD;
+      const isNewOne = isNew(item.lastWrongAt || item.addedAt);
+      const cardClass = `${extraClass} ${isHard ? 'is-hard' : ''} ${isNewOne ? 'is-new' : ''}`;
+      const countClass = isHard ? 'mistake-wrongcount is-hard' : 'mistake-wrongcount';
+      const lastTime = item.lastWrongAt ? new Date(item.lastWrongAt).toLocaleString('zh-CN', { hour12: false, month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
+      return `
+        <div class="mistake-card ${cardClass}" data-id="${item.id}">
+          <div class="mistake-card-head">
+            <span class="mistake-source">📂 ${item.source || '未分类'} · ${item.collection || 'misc'}${lastTime ? ' · ' + lastTime : ''}</span>
+            <span class="${countClass}">错 ${item.wrongCount} 次</span>
+          </div>
+          <div class="mistake-q"><strong>Q:</strong> ${item.question}</div>
+          <ul class="mistake-options">
+            ${item.options.map((o: any) => {
+              let cls = '';
+              if (o.id === item.correct) cls = 'opt-correct';
+              else if (o.id === item.userAnswer) cls = 'opt-user';
+              return `<li class="${cls}">${o.id}. ${o.text}</li>`;
+            }).join('')}
+          </ul>
+          ${item.explain ? `<div class="mistake-explain">${item.explain}</div>` : ''}
+          <div class="mt-2">
+            <button class="btn btn-sm m-remove" data-id="${item.id}">✓ 标记掌握（移除）</button>
+          </div>
+        </div>
+      `;
+    }).join('');
   }
 
   // 重做
@@ -165,13 +286,19 @@ import Layout from '../layouts/Layout.astro';
   let redoCorrect = 0;
   let redoQuestions: any[] = [];
 
-  function startRedo() {
+  function startRedo(mode: 'all' | 'hard') {
     const m = load();
-    redoQuestions = Object.values(m);
-    if (redoQuestions.length === 0) { alert('错题本是空的'); return; }
+    let all = Object.values(m);
+    if (mode === 'hard') {
+      all = all.filter((x: any) => (x.wrongCount || 0) >= HARD_THRESHOLD);
+    }
+    if (all.length === 0) { alert(mode === 'hard' ? '没有"重点复习"题（错 3+ 次）' : '错题本是空的'); return; }
+    // 按错误次数倒序：错的多的先复习
+    redoQuestions = all.sort((a: any, b: any) => (b.wrongCount || 0) - (a.wrongCount || 0));
     redoIdx = 0;
     redoAnswers = {};
     redoCorrect = 0;
+    quizMode.textContent = mode === 'hard' ? '模式：🔥 重点复习（错 3+ 次）' : '模式：全部错题';
     quizHost.classList.remove('hidden');
     quizHost.querySelector('.quiz-body')!.classList.remove('hidden');
     quizHost.querySelector('.quiz-result')!.classList.add('hidden');
@@ -228,7 +355,6 @@ import Layout from '../layouts/Layout.astro';
       explainEl.classList.remove('hidden');
       explainEl.innerHTML = `<strong>解析：</strong>${q.explain}`;
     }
-    // 答对从错题本移除
     if (isCorrect) {
       const m = load();
       if (m[q.id]) {
@@ -240,7 +366,9 @@ import Layout from '../layouts/Layout.astro';
     }
   }
 
-  redoBtn.addEventListener('click', startRedo);
+  redoBtn.addEventListener('click', () => startRedo('all'));
+  redoHardBtn.addEventListener('click', () => startRedo('hard'));
+  sortEl.addEventListener('change', render);
   quizHost.querySelector('.q-prev')!.addEventListener('click', () => {
     if (redoIdx > 0) { redoIdx--; renderRedo(); }
   });
@@ -255,7 +383,7 @@ import Layout from '../layouts/Layout.astro';
       quizHost.querySelector('.quiz-result')!.classList.remove('hidden');
     }
   });
-  quizHost.querySelector('.q-restart')!.addEventListener('click', startRedo);
+  quizHost.querySelector('.q-restart')!.addEventListener('click', () => startRedo('all'));
   quizHost.querySelector('.q-back-list')!.addEventListener('click', () => {
     quizHost.classList.add('hidden');
     render();

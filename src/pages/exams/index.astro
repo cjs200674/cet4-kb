@@ -1,0 +1,65 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { getCollection } from 'astro:content';
+
+const entries = await getCollection('exams');
+
+// 按 examId 分组
+const grouped: Record<string, any[]> = {};
+for (const e of entries) {
+  const key = `${e.data.year}.${String(e.data.month).padStart(2, '0')}`;
+  if (!grouped[key]) grouped[key] = [];
+  grouped[key].push(e);
+}
+const sortedKeys = Object.keys(grouped).sort().reverse();
+
+const base = (import.meta.env.BASE_URL || "/").replace(/\/?$/, "/");
+---
+
+<Layout title="历年真题" description="CET-4 历年真题（2018-2026）">
+  <h1>📝 历年真题</h1>
+  <p class="muted">大学英语四级历年真题 · 来源：wamich/english-exem-md 等公开仓库</p>
+
+  <div class="exam-summary mt-2">
+    <h2>📊 收录情况</h2>
+    <ul>
+      <li>已收录 <strong>{entries.length}</strong> 套真题，覆盖 <strong>{Object.keys(grouped).length}</strong> 个考试场次</li>
+      <li>每套含 3 个部分：写作+听力 / 阅读 / 翻译</li>
+      <li>阅读 Section A 选词填空 + Section B 段落匹配 + Section C 仔细阅读（2 篇）</li>
+      <li>听力 Section A 短篇新闻 + Section B 长对话 + Section C 听力篇章</li>
+    </ul>
+    <p class="dim mt-2">
+      ⚠️ 公开 markdown 化真题资源有限。GitHub 上目前仅 wamich/english-exem-md 提供 2023.06 和 2023.12 两套完整内容。
+      建议配合纸质真题集或主流 app（考虫、Quizlet、星火）使用。
+    </p>
+  </div>
+
+  {sortedKeys.map((key) => (
+    <section class="exam-set mt-3">
+      <h2>📅 {key} 真题</h2>
+      <div class="card-grid">
+        {grouped[key].sort((a, b) => a.data.part - b.data.part).map((e) => (
+          <a href={`${base}exams/${e.slug}`} class="card">
+            <h3>第 {e.data.part} 部分</h3>
+            <div class="card-meta">
+              <span class="tag">{e.data.year}.{String(e.data.month).padStart(2, '0')}</span>
+              <span class="tag tag-medium">真题</span>
+              {e.data.part === 1 && <span class="tag">写作+听力</span>}
+              {e.data.part === 2 && <span class="tag">阅读</span>}
+              {e.data.part === 3 && <span class="tag">翻译</span>}
+            </div>
+            <p class="card-desc">{e.data.description}</p>
+          </a>
+        ))}
+      </div>
+    </section>
+  ))}
+
+  <h2 class="mt-3">📚 真题使用建议</h2>
+  <ol>
+    <li><strong>限时训练</strong>：写作 30 min + 听力 25 min + 阅读 40 min + 翻译 30 min = 125 min</li>
+    <li><strong>做完对答案</strong>：每套做完先打分，错的题进「📕 错题本」自动收集</li>
+    <li><strong>精读听力</strong>：听力原文反复听，对照脚本（虽然这套没有音频，但可以看原文）</li>
+    <li><strong>重做错题</strong>：每周用「📊 进度」里"重点复习"复习错 3+ 次的题</li>
+  </ol>
+</Layout>

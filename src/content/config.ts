@@ -55,4 +55,15 @@ const writing = defineCollection({
   }),
 });
 
-export const collections = { vocabulary, reading, listening, grammar, writing };
+const exams = defineCollection({
+  type: 'content',
+  schema: baseSchema.extend({
+    examId: z.string(), // 如 2023.06-1
+    year: z.number().int(),
+    month: z.number().int(),
+    part: z.number().int(), // 1=写作+听力, 2=阅读, 3=翻译
+    source: z.string().optional(),
+  }),
+});
+
+export const collections = { vocabulary, reading, listening, grammar, writing, exams };

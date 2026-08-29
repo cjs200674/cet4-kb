@@ -1,0 +1,22 @@
+---
+word: outdoors
+phonetic: ""
+pos: "adv"
+level: 4
+tags: [CET-4]
+difficulty: medium
+reviewed: 0
+description: "在户外，在野外"
+---
+
+# outdoors
+
+**释义**：在户外，在野外
+
+**英文释义**：在户外，在野外
+
+**词性**：adv
+
+
+
+> 来源：KyleBing/english-vocabulary 词库

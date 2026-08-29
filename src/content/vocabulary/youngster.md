@@ -1,0 +1,22 @@
+---
+word: youngster
+phonetic: ""
+pos: "n"
+level: 4
+tags: [CET-4]
+difficulty: medium
+reviewed: 0
+description: " 青年， 年轻人， 孩子"
+---
+
+# youngster
+
+**释义**： 青年， 年轻人， 孩子
+
+**英文释义**： 青年， 年轻人， 孩子
+
+**词性**：n
+
+
+
+> 来源：KyleBing/english-vocabulary 词库
