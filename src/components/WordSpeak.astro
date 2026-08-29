@@ -1,5 +1,6 @@
 ---
 // 词汇朗读组件：每个词读 2 遍英文 + 1 遍中文，词间有停顿
+// 支持可拖拽进度条 + 跳转播放
 export interface WordItem {
   word: string;
   phonetic?: string;
@@ -20,17 +21,36 @@ const data = JSON.stringify(words);
   <div class="speak-toolbar">
     <button class="btn btn-primary ws-play" data-state="idle">
       <span class="ws-icon">▶</span>
-      <span class="ws-label">开始朗读全部 {words.length} 词</span>
+      <span class="ws-label">开始朗读</span>
     </button>
+    <button class="btn ws-pause" style="display:none;">⏸ 暂停</button>
     <button class="btn ws-stop" style="display:none;">⏹ 停止</button>
-    <span class="speak-hint dim">
-      语速 0.65 · 每词：英 ×2 + 中 ×1 · 词间停顿 1.5s
-    </span>
+    <button class="btn ws-skip-prev" style="display:none;" title="上一个词">⏮</button>
+    <button class="btn ws-skip-next" style="display:none;" title="下一个词">⏭</button>
   </div>
 
   <div class="ws-progress mt-2">
+    <div class="ws-progress-meta">
+      <span class="ws-current-word">准备开始</span>
+      <span class="ws-counter dim">
+        <span class="ws-current">0</span> / <span class="ws-total">{words.length}</span>
+      </span>
+    </div>
+    <input
+      type="range"
+      class="ws-slider"
+      min="0"
+      max={words.length - 1}
+      value="0"
+      step="1"
+      aria-label="进度条 - 拖动跳转到对应单词"
+    />
     <div class="ws-progress-bar"><div class="ws-progress-fill" style="width:0%"></div></div>
     <div class="ws-progress-text dim">未开始</div>
+  </div>
+
+  <div class="ws-tip mt-2 dim">
+    提示：拖动进度条跳到任意单词开始朗读 · 语速 0.65 · 词间停顿 1.5s
   </div>
 
   <ol class="ws-list mt-2">
@@ -42,6 +62,7 @@ const data = JSON.stringify(words);
         {w.pos && <span class="ws-pos tag">{w.pos}</span>}
         <span class="ws-meaning">{w.meaning}</span>
         <span class="ws-status">—</span>
+        <button class="ws-jump" data-idx={i} title="跳到这个词">▶</button>
       </li>
     ))}
   </ol>
@@ -53,37 +74,70 @@ const data = JSON.stringify(words);
     if (!words.length) return;
 
     const playBtn = host.querySelector('.ws-play') as HTMLButtonElement;
+    const pauseBtn = host.querySelector('.ws-pause') as HTMLButtonElement;
     const stopBtn = host.querySelector('.ws-stop') as HTMLButtonElement;
+    const skipPrevBtn = host.querySelector('.ws-skip-prev') as HTMLButtonElement;
+    const skipNextBtn = host.querySelector('.ws-skip-next') as HTMLButtonElement;
     const iconEl = host.querySelector('.ws-icon') as HTMLElement;
     const labelEl = host.querySelector('.ws-label') as HTMLElement;
+    const slider = host.querySelector('.ws-slider') as HTMLInputElement;
     const progressBar = host.querySelector('.ws-progress-fill') as HTMLElement;
     const progressText = host.querySelector('.ws-progress-text') as HTMLElement;
+    const currentWordEl = host.querySelector('.ws-current-word') as HTMLElement;
+    const currentEl = host.querySelector('.ws-current') as HTMLElement;
+    const totalEl = host.querySelector('.ws-total') as HTMLElement;
     const items = host.querySelectorAll<HTMLElement>('.ws-item');
 
     let idx = 0;
     let isPlaying = false;
-    const RATE = 0.65;          // 慢速
-    const EN_GAP = 350;         // 英文两遍之间
-    const EN_CN_GAP = 500;      // 英文第二遍到中文之间
-    const WORD_GAP = 1500;      // 词之间
-    const totalSteps = words.length * 3; // 每词 3 步：英1、英2、中
+    let isPaused = false;
+    let pendingStep: ((v?: any) => void) | null = null; // 当前正在等的 onend
+    const RATE = 0.65;
+    const EN_GAP = 350;
+    const EN_CN_GAP = 500;
+    const WORD_GAP = 1500;
+    const totalSteps = words.length * 3;
+    let currentStep = 0; // 当前步（每词 3 步）
 
-    function setUi(state: 'idle' | 'playing') {
+    function setUi(state: 'idle' | 'playing' | 'paused') {
       if (state === 'playing') {
         playBtn.style.display = 'none';
+        pauseBtn.style.display = 'inline-block';
         stopBtn.style.display = 'inline-block';
+        skipPrevBtn.style.display = 'inline-block';
+        skipNextBtn.style.display = 'inline-block';
+        pauseBtn.textContent = '⏸ 暂停';
         labelEl.textContent = '朗读中…';
+      } else if (state === 'paused') {
+        playBtn.style.display = 'none';
+        pauseBtn.style.display = 'inline-block';
+        stopBtn.style.display = 'inline-block';
+        skipPrevBtn.style.display = 'inline-block';
+        skipNextBtn.style.display = 'inline-block';
+        pauseBtn.textContent = '▶ 继续';
+        labelEl.textContent = '已暂停';
       } else {
         playBtn.style.display = 'inline-block';
+        pauseBtn.style.display = 'none';
         stopBtn.style.display = 'none';
-        labelEl.textContent = `开始朗读全部 ${words.length} 词`;
+        skipPrevBtn.style.display = 'none';
+        skipNextBtn.style.display = 'none';
+        labelEl.textContent = '开始朗读';
+        iconEl.textContent = '▶';
       }
     }
 
     function updateProgress(step: number, msg: string) {
-      const pct = Math.round((step / totalSteps) * 100);
+      currentStep = step;
+      const pct = (step / totalSteps) * 100;
       progressBar.style.width = `${pct}%`;
       progressText.textContent = msg;
+      currentEl.textContent = String(Math.floor(step / 3) + 1);
+      // 同步 slider（不触发 jump）
+      const wordIdx = Math.floor(step / 3);
+      if (document.activeElement !== slider) {
+        slider.value = String(wordIdx);
+      }
     }
 
     function setItemStatus(i: number, status: string) {
@@ -98,18 +152,39 @@ const data = JSON.stringify(words);
       }
     }
 
-    function stop() {
-      if (!('speechSynthesis' in window)) {
-        alert('当前浏览器不支持 speechSynthesis API，请用 Chrome / Edge / Safari');
-        return;
+    function highlightCurrent() {
+      items.forEach((it) => it.classList.remove('ws-current-focus'));
+      const it = items[idx];
+      if (it) {
+        it.classList.add('ws-current-focus');
+        it.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       }
+      const w = words[idx];
+      if (w) {
+        currentWordEl.textContent = `${w.word}  (${idx + 1}/${words.length})`;
+        currentWordEl.style.color = 'var(--c-accent)';
+      }
+    }
+
+    function fullStop() {
       window.speechSynthesis.cancel();
+      if (pendingStep) { pendingStep(); pendingStep = null; }
       isPlaying = false;
+      isPaused = false;
       setUi('idle');
-      // 重置当前词状态
-      if (idx < words.length) {
-        setItemStatus(idx, '—');
-      }
+      updateProgress(0, '已停止');
+      currentWordEl.textContent = '准备开始';
+      currentWordEl.style.color = '';
+      items.forEach((it) => it.classList.remove('ws-current-focus', 'ws-active'));
+      // 不重置 items 状态，保留已完成
+    }
+
+    function pause() {
+      window.speechSynthesis.cancel();
+      if (pendingStep) { pendingStep(); pendingStep = null; }
+      isPlaying = false;
+      isPaused = true;
+      setUi('paused');
     }
 
     function speak(text: string, lang: 'en-US' | 'zh-CN'): Promise<void> {
@@ -120,30 +195,36 @@ const data = JSON.stringify(words);
         u.rate = RATE;
         u.onend = () => resolve();
         u.onerror = () => resolve();
-        try { window.speechSynthesis.speak(u); } catch { resolve(); }
+        pendingStep = resolve;
+        try { window.speechSynthesis.speak(u); } catch { pendingStep = null; resolve(); }
       });
+    }
+
+    function sleep(ms: number): Promise<void> {
+      return new Promise((r) => setTimeout(r, ms));
     }
 
     async function run() {
       isPlaying = true;
+      isPaused = false;
       setUi('playing');
       while (idx < words.length && isPlaying) {
         const w = words[idx];
-        updateProgress(idx * 3, `第 ${idx + 1}/${words.length} 词: ${w.word}`);
-
-        // 第 1 遍英文
+        highlightCurrent();
+        // 步骤 1
+        updateProgress(idx * 3, `第 ${idx + 1}/${words.length} 词: ${w.word} · 英1`);
         setItemStatus(idx, '英1…');
         await speak(w.word, 'en-US');
         if (!isPlaying) return;
         await sleep(EN_GAP);
-
-        // 第 2 遍英文
+        // 步骤 2
+        updateProgress(idx * 3 + 1, `第 ${idx + 1}/${words.length} 词: ${w.word} · 英2`);
         setItemStatus(idx, '英2…');
         await speak(w.word, 'en-US');
         if (!isPlaying) return;
         await sleep(EN_CN_GAP);
-
-        // 第 1 遍中文
+        // 步骤 3
+        updateProgress(idx * 3 + 2, `第 ${idx + 1}/${words.length} 词: ${w.word} · 中`);
         setItemStatus(idx, '中…');
         await speak(w.meaning, 'zh-CN');
         if (!isPlaying) return;
@@ -156,14 +237,15 @@ const data = JSON.stringify(words);
       }
       if (isPlaying) {
         updateProgress(totalSteps, '🎉 全部完成！');
+        currentWordEl.textContent = '🎉 全部完成！';
+        currentWordEl.style.color = 'var(--c-accent-2)';
       }
       isPlaying = false;
+      isPaused = false;
       setUi('idle');
     }
 
-    function sleep(ms: number): Promise<void> {
-      return new Promise((r) => setTimeout(r, ms));
-    }
+    // --- 控件事件 ---
 
     playBtn.addEventListener('click', () => {
       if (!('speechSynthesis' in window)) {
@@ -175,13 +257,110 @@ const data = JSON.stringify(words);
       items.forEach((it) => {
         const s = it.querySelector('.ws-status');
         if (s) s.textContent = '—';
-        it.classList.remove('ws-active', 'ws-done');
+        it.classList.remove('ws-active', 'ws-done', 'ws-current-focus');
       });
       updateProgress(0, '准备中…');
       run();
     });
 
-    stopBtn.addEventListener('click', stop);
+    pauseBtn.addEventListener('click', () => {
+      if (isPaused) {
+        // 继续
+        isPaused = false;
+        isPlaying = true;
+        setUi('playing');
+        run();
+      } else {
+        pause();
+      }
+    });
+
+    stopBtn.addEventListener('click', fullStop);
+
+    skipPrevBtn.addEventListener('click', () => {
+      if (idx > 0) {
+        idx = Math.max(0, idx - 1);
+        if (isPlaying) {
+          window.speechSynthesis.cancel();
+          if (pendingStep) { pendingStep(); pendingStep = null; }
+          // 不重置 isPlaying，让 run 自然继续
+          isPlaying = true; // run 会用 while 检查
+        }
+        if (isPaused) {
+          // 暂停状态下手动更新显示
+          highlightCurrent();
+          updateProgress(idx * 3, `第 ${idx + 1}/${words.length} 词: ${words[idx].word} · 已暂停`);
+        }
+      }
+    });
+
+    skipNextBtn.addEventListener('click', () => {
+      if (idx < words.length - 1) {
+        idx = Math.min(words.length - 1, idx + 1);
+        if (isPlaying) {
+          window.speechSynthesis.cancel();
+          if (pendingStep) { pendingStep(); pendingStep = null; }
+          isPlaying = true;
+        }
+        if (isPaused) {
+          highlightCurrent();
+          updateProgress(idx * 3, `第 ${idx + 1}/${words.length} 词: ${words[idx].word} · 已暂停`);
+        }
+      }
+    });
+
+    // 拖拽进度条 - 关键功能！
+    let userIsDragging = false;
+    slider.addEventListener('mousedown', () => { userIsDragging = true; });
+    slider.addEventListener('touchstart', () => { userIsDragging = true; });
+    slider.addEventListener('mouseup', () => { userIsDragging = false; jumpTo(parseInt(slider.value)); });
+    slider.addEventListener('touchend', () => { userIsDragging = false; jumpTo(parseInt(slider.value)); });
+
+    function jumpTo(newIdx: number) {
+      newIdx = Math.max(0, Math.min(words.length - 1, newIdx));
+      if (newIdx === idx) return;
+      const wasPlaying = isPlaying;
+      window.speechSynthesis.cancel();
+      if (pendingStep) { pendingStep(); pendingStep = null; }
+      idx = newIdx;
+      // 重置该词之前所有项
+      items.forEach((it, i) => {
+        if (i < newIdx) {
+          const s = it.querySelector('.ws-status');
+          if (s) s.textContent = '✓';
+          it.classList.add('ws-done');
+          it.classList.remove('ws-active');
+        } else if (i === newIdx) {
+          // 当前词状态由 run() 设置
+        } else {
+          const s = it.querySelector('.ws-status');
+          if (s) s.textContent = '—';
+          it.classList.remove('ws-active', 'ws-done');
+        }
+      });
+      highlightCurrent();
+      updateProgress(newIdx * 3, `已跳到第 ${newIdx + 1}/${words.length} 词: ${words[newIdx].word}`);
+      if (wasPlaying) {
+        // 继续朗读
+        isPlaying = true;
+        isPaused = false;
+        setUi('playing');
+        run();
+      } else if (isPaused) {
+        updateProgress(newIdx * 3, `已跳到第 ${newIdx + 1}/${words.length} 词: ${words[newIdx].word} · 已暂停`);
+      }
+    }
+
+    // 列表里的 ▶ 跳转按钮
+    document.querySelectorAll<HTMLButtonElement>('.ws-jump').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const newIdx = parseInt(btn.dataset.idx!);
+        slider.value = String(newIdx);
+        jumpTo(newIdx);
+      });
+    });
   });
 </script>
 
@@ -199,25 +378,73 @@ const data = JSON.stringify(words);
     gap: 8px;
     flex-wrap: wrap;
   }
-  .speak-hint { font-size: 12px; }
   .ws-progress {
+    margin-top: 14px;
+  }
+  .ws-progress-meta {
     display: flex;
-    align-items: center;
-    gap: 12px;
+    justify-content: space-between;
+    margin-bottom: 6px;
+    font-size: 13px;
+  }
+  .ws-current-word {
+    font-weight: 600;
+    font-size: 14px;
+  }
+  .ws-counter { font-family: var(--font-mono); }
+  .ws-slider {
+    width: 100%;
+    height: 8px;
+    appearance: none;
+    -webkit-appearance: none;
+    background: var(--c-bg-soft-2);
+    border-radius: 4px;
+    outline: none;
+    cursor: pointer;
+    margin: 6px 0 4px;
+  }
+  .ws-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--c-accent);
+    border: 2px solid var(--c-bg);
+    cursor: grab;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+    transition: transform 0.1s;
+  }
+  .ws-slider::-webkit-slider-thumb:hover {
+    transform: scale(1.15);
+  }
+  .ws-slider::-webkit-slider-thumb:active {
+    cursor: grabbing;
+    transform: scale(1.25);
+    background: var(--c-accent-2);
+  }
+  .ws-slider::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--c-accent);
+    border: 2px solid var(--c-bg);
+    cursor: grab;
   }
   .ws-progress-bar {
-    flex: 1;
-    height: 6px;
+    width: 100%;
+    height: 4px;
     background: var(--c-bg-soft-2);
-    border-radius: 3px;
+    border-radius: 2px;
     overflow: hidden;
+    margin-top: 2px;
   }
   .ws-progress-fill {
     height: 100%;
     background: linear-gradient(90deg, var(--c-accent), var(--c-accent-2));
     transition: width 0.3s;
   }
-  .ws-progress-text { font-size: 12px; min-width: 200px; }
+  .ws-progress-text { font-size: 12px; }
+  .ws-tip { font-size: 12px; }
   .ws-list {
     list-style: none;
     padding: 0;
@@ -227,7 +454,7 @@ const data = JSON.stringify(words);
   }
   .ws-item {
     display: grid;
-    grid-template-columns: 30px 1fr auto auto 1fr 60px;
+    grid-template-columns: 30px 1fr auto auto 1fr 60px 32px;
     gap: 10px;
     align-items: center;
     padding: 6px 8px;
@@ -241,6 +468,26 @@ const data = JSON.stringify(words);
     font-weight: 600;
   }
   .ws-item.ws-done .ws-word { color: var(--c-accent-2); }
+  .ws-item.ws-current-focus {
+    background: rgba(88, 166, 255, 0.18);
+    box-shadow: inset 3px 0 0 var(--c-accent);
+  }
+  .ws-jump {
+    background: transparent;
+    border: 1px solid var(--c-border);
+    color: var(--c-accent);
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    padding: 0;
+    transition: all 0.15s;
+  }
+  .ws-jump:hover {
+    background: var(--c-accent);
+    color: #0d1117;
+  }
   .ws-num { color: var(--c-text-dim); font-family: var(--font-mono); }
   .ws-word { color: var(--c-text); font-weight: 600; }
   .ws-phonetic { font-family: var(--font-mono); font-size: 12px; }
@@ -252,7 +499,7 @@ const data = JSON.stringify(words);
     font-family: var(--font-mono);
   }
   @media (max-width: 700px) {
-    .ws-item { grid-template-columns: 24px 1fr; gap: 4px; }
-    .ws-phonetic, .ws-pos, .ws-status { display: none; }
+    .ws-item { grid-template-columns: 24px 1fr 32px; gap: 4px; }
+    .ws-phonetic, .ws-pos, .ws-status, .ws-meaning { display: none; }
   }
 </style>
