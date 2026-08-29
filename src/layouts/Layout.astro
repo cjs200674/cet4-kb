@@ -5,7 +5,7 @@ export interface Props {
 }
 
 const { title, description = '大学英语四级（CET-4）备考知识库' } = Astro.props;
-const base = import.meta.env.BASE_URL;
+const base = (import.meta.env.BASE_URL || "/").replace(/\/?$/, "/");
 ---
 
 <!doctype html>

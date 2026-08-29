@@ -4,7 +4,7 @@ import { getCollection } from 'astro:content';
 
 const entries = await getCollection('listening');
 entries.sort((a, b) => (b.data.year || 0) - (a.data.year || 0));
-const base = import.meta.env.BASE_URL;
+const base = (import.meta.env.BASE_URL || "/").replace(/\/?$/, "/");
 ---
 
 <Layout title="听力" description="CET-4 听力，场景词 + 真题原文 + 听力脚本">

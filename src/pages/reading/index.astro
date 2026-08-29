@@ -4,7 +4,7 @@ import { getCollection } from 'astro:content';
 
 const entries = await getCollection('reading');
 entries.sort((a, b) => (b.data.year || 0) - (a.data.year || 0));
-const base = import.meta.env.BASE_URL;
+const base = (import.meta.env.BASE_URL || "/").replace(/\/?$/, "/");
 ---
 
 <Layout title="阅读" description="CET-4 阅读理解，考点分析 + 真题精讲">
