@@ -361,6 +361,30 @@ const data = JSON.stringify(words);
         jumpTo(newIdx);
       });
     });
+
+    // 键盘快捷键（全局 dispatch）
+    window.addEventListener('tts-toggle', () => {
+      if (isPaused) { isPaused = false; isPlaying = true; setUi('playing'); run(); }
+      else if (isPlaying) { pause(); }
+      else { playBtn.click(); }
+    });
+    window.addEventListener('tts-stop', () => fullStop());
+    window.addEventListener('tts-prev', () => {
+      if (idx > 0) {
+        idx = idx - 1;
+        window.speechSynthesis.cancel();
+        if (pendingStep) { pendingStep(); pendingStep = null; }
+        if (isPaused) { highlightCurrent(); updateProgress(idx * 3, `第 ${idx + 1}/${words.length} 词 · 已暂停`); }
+      }
+    });
+    window.addEventListener('tts-next', () => {
+      if (idx < words.length - 1) {
+        idx = idx + 1;
+        window.speechSynthesis.cancel();
+        if (pendingStep) { pendingStep(); pendingStep = null; }
+        if (isPaused) { highlightCurrent(); updateProgress(idx * 3, `第 ${idx + 1}/${words.length} 词 · 已暂停`); }
+      }
+    });
   });
 </script>
 

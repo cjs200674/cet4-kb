@@ -79,6 +79,71 @@ const base = (import.meta.env.BASE_URL || "/").replace(/\/?$/, "/");
       }
       updateMistakeBadge();
       window.addEventListener('cet4-mistakes-update', updateMistakeBadge);
+
+      // ============================================
+      // 全局键盘快捷键（TTS 通用）
+      // 任何带 TTS 的页面监听这些自定义事件即可
+      // ============================================
+      document.addEventListener('keydown', (e) => {
+        // 输入框里不触发
+        const t = e.target as HTMLElement;
+        if (t && (t.matches('input, textarea, [contenteditable="true"]') || t.closest('input, textarea, [contenteditable="true"]'))) {
+          return;
+        }
+        // Ctrl/Meta + 组合键不冲突
+        if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+        let evt = '';
+        switch (e.key) {
+          case ' ':
+            evt = 'tts-toggle';     // 空格：播放/暂停
+            break;
+          case 'ArrowLeft':
+            evt = 'tts-prev';       // ←：上一段
+            break;
+          case 'ArrowRight':
+            evt = 'tts-next';       // →：下一段
+            break;
+          case 'Escape':
+            evt = 'tts-stop';       // Esc：停止
+            break;
+          case 'ArrowUp':
+            evt = 'tts-rate-up';    // ↑：加快语速
+            break;
+          case 'ArrowDown':
+            evt = 'tts-rate-down';  // ↓：放慢语速
+            break;
+          case 'm':
+          case 'M':
+            evt = 'tts-mute';       // M：静音
+            break;
+        }
+        if (evt) {
+          // 仅在有 TTS 元素的页面才拦截
+          if (document.querySelector('[data-tts-host], .speak-btn, .word-speak-host, .single-speak')) {
+            e.preventDefault();
+            window.dispatchEvent(new CustomEvent(evt));
+          }
+        }
+      });
+
+      // 页面底部显示快捷键提示
+      window.addEventListener('load', () => {
+        if (document.querySelector('[data-tts-host], .speak-btn, .word-speak-host, .single-speak, .ws-host')) {
+          let tip = document.getElementById('tts-keys-tip');
+          if (!tip) {
+            tip = document.createElement('div');
+            tip.id = 'tts-keys-tip';
+            tip.style.cssText = 'position:fixed;bottom:12px;left:12px;background:var(--c-bg-soft);border:1px solid var(--c-border);border-radius:8px;padding:8px 12px;font-size:12px;color:var(--c-text-soft);z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.3);max-width:90vw;';
+            tip.innerHTML = '⌨️ <strong>TTS 快捷键</strong>: 空格 播放/暂停 · ← → 切段 · ↑ ↓ 调速 · M 静音 · Esc 停止';
+            document.body.appendChild(tip);
+            // 5 秒后自动隐藏
+            setTimeout(() => { tip.style.opacity = '0.3'; }, 5000);
+            tip.addEventListener('mouseenter', () => { tip.style.opacity = '1'; });
+            tip.addEventListener('mouseleave', () => { tip.style.opacity = '0.3'; });
+          }
+        }
+      });
     </script>
   </body>
 </html>
