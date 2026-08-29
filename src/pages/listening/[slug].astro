@@ -344,65 +344,69 @@ function extractText(markdown: string): string {
     </section>
   )}
 
-  <script define:vars={{ slug: entry.slug, body: entry.body || '' }}>
-    // 拿到 entry 的 markdown body 后动态挂 TTS 按钮
-    const articleEl = document.querySelector('article');
-    if (articleEl && body) {
-      // 提取纯文本（粗略处理）
-      const tmp = document.createElement('div');
-      tmp.innerHTML = body
-        .replace(/```[\s\S]*?```/g, '')
-        .replace(/[#*`>]/g, '')
-        .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
-        .replace(/^---[\s\S]*?---/, '');
-      const text = tmp.textContent || '';
-      // 创建一个浮动工具栏
-      const toolbar = document.createElement('div');
-      toolbar.className = 'speak-toolbar';
-      toolbar.innerHTML = `
-        <button class="btn speak-all-btn" data-state="idle" style="background: var(--c-accent); color: #000; border-color: var(--c-accent); font-weight: 600;">
-          <span class="speak-all-icon">▶</span>
-          <span class="speak-all-label">朗读整篇原文</span>
-        </button>
-        <button class="btn speak-stop-btn" style="display:none;">⏹ 停止</button>
-        <span class="speak-hint dim">提示：用浏览器内置语音引擎，建议用 Chrome/Edge</span>
-      `;
-      articleEl.insertBefore(toolbar, articleEl.firstChild);
+  <script define:vars={{ slug: entry.slug }}>
+    // TTS：从已渲染的 article DOM 提取纯文本（避免依赖 entry.body）
+    (() => {
+      const articleEl = document.querySelector('article');
+      if (!articleEl) return;
+      // 等下一帧，确保 <Content /> 已渲染
+      requestAnimationFrame(() => {
+        const text = (articleEl.textContent || '').trim();
+        if (!text) return;
 
-      const playBtn = toolbar.querySelector('.speak-all-btn')!;
-      const stopBtn = toolbar.querySelector('.speak-stop-btn')!;
-      const iconEl = playBtn.querySelector('.speak-all-icon')!;
-      const labelEl = playBtn.querySelector('.speak-all-label')!;
-      let isPlaying = false;
+        const toolbar = document.createElement('div');
+        toolbar.className = 'speak-toolbar';
+        toolbar.innerHTML = `
+          <button class="btn speak-all-btn" data-state="idle" style="background: var(--c-accent); color: #000; border-color: var(--c-accent); font-weight: 600;">
+            <span class="speak-all-icon">▶</span>
+            <span class="speak-all-label">朗读整篇原文</span>
+          </button>
+          <button class="btn speak-stop-btn" style="display:none;">⏹ 停止</button>
+          <span class="speak-hint dim">提示：浏览器内置语音，建议 Chrome/Edge</span>
+        `;
+        articleEl.insertBefore(toolbar, articleEl.firstChild);
 
-      function setState(s) {
-        if (s === 'playing') {
-          playBtn.style.display = 'none';
-          stopBtn.style.display = 'inline-block';
-        } else {
-          playBtn.style.display = 'inline-block';
-          stopBtn.style.display = 'none';
+        const playBtn = toolbar.querySelector('.speak-all-btn');
+        const stopBtn = toolbar.querySelector('.speak-stop-btn');
+        let isPlaying = false;
+
+        function setState(s) {
+          if (s === 'playing') {
+            playBtn.style.display = 'none';
+            stopBtn.style.display = 'inline-block';
+          } else {
+            playBtn.style.display = 'inline-block';
+            stopBtn.style.display = 'none';
+          }
         }
-      }
 
-      playBtn.addEventListener('click', () => {
-        window.speechSynthesis.cancel();
-        const u = new SpeechSynthesisUtterance(text);
-        u.rate = 0.9;
-        u.lang = 'en-US';
-        u.onend = () => { isPlaying = false; setState('idle'); };
-        u.onerror = () => { isPlaying = false; setState('idle'); };
-        window.speechSynthesis.speak(u);
-        isPlaying = true;
-        setState('playing');
-      });
+        playBtn.addEventListener('click', () => {
+          if (!('speechSynthesis' in window)) {
+            alert('当前浏览器不支持 speechSynthesis API，请用 Chrome / Edge / Safari 最新版');
+            return;
+          }
+          window.speechSynthesis.cancel();
+          const u = new SpeechSynthesisUtterance(text);
+          u.rate = 0.9;
+          u.lang = 'en-US';
+          u.onend = () => { isPlaying = false; setState('idle'); };
+          u.onerror = () => { isPlaying = false; setState('idle'); };
+          try {
+            window.speechSynthesis.speak(u);
+            isPlaying = true;
+            setState('playing');
+          } catch (e) {
+            alert('朗读失败：' + e.message);
+          }
+        });
 
-      stopBtn.addEventListener('click', () => {
-        window.speechSynthesis.cancel();
-        isPlaying = false;
-        setState('idle');
+        stopBtn.addEventListener('click', () => {
+          window.speechSynthesis.cancel();
+          isPlaying = false;
+          setState('idle');
+        });
       });
-    }
+    })();
   </script>
 
   <style>
