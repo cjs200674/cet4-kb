@@ -56,6 +56,7 @@ const sceneWords = isScenes ? [
 ] : [];
 
 // 听力原文分段（按段落或空行）
+// 关键：每段尽量短，让 ±5 秒跳跃更精确
 function splitIntoSegments(markdown: string): string[] {
   const text = markdown
     .replace(/```[\s\S]*?```/g, '')
@@ -68,21 +69,35 @@ function splitIntoSegments(markdown: string): string[] {
     .replace(/[<>]/g, '')
     .trim();
 
-  // 按空行分段，再按句号分
+  // 按空行分段；每段再按短句切（句号、问号、感叹号、逗号、冒号、问号）
+  // 目标：每段 ≈ 8-15 词，对应 1-2 秒朗读
   const paragraphs = text.split(/\n{2,}/).map(p => p.trim()).filter(p => p.length > 0);
   const segments: string[] = [];
+  const splitRe = /(?<=[.!?。！？])\s+|(?<=[,，])\s+/;
   for (const p of paragraphs) {
-    if (p.length < 100) {
+    if (p.length < 80) {
       segments.push(p);
     } else {
-      const sentences = p.split(/(?<=[.!?])\s+/);
-      segments.push(...sentences.filter(s => s.trim().length > 0));
+      const sentences = p.split(splitRe).map(s => s.trim()).filter(s => s.length > 0);
+      segments.push(...sentences);
     }
   }
   return segments;
 }
 
 const segments = splitIntoSegments(rawBody);
+
+// 估算每段朗读时长（秒）。基于：英文 ~14 chars/sec @ rate=1，按 rate 缩放。
+// 句末标点（.!?）加 0.4s 停顿；逗号 0.2s。
+function estimateDurations(segs: string[], rate: number): number[] {
+  const cps = 14 * rate; // chars per second
+  return segs.map((s) => {
+    let t = s.length / cps;
+    if (/[.!?]$/.test(s)) t += 0.4;
+    else if (/[,;:]$/.test(s)) t += 0.2;
+    return Math.max(0.3, t);
+  });
+}
 
 // 听力题库
 const quizByEntry: Record<string, any> = {
@@ -190,7 +205,8 @@ const quizData = quizByEntry[entry.slug] || null;
       <div class="tts-progress-meta">
         <span class="lsn-current-word">准备开始</span>
         <span class="lsn-counter dim">
-          <span class="lsn-current">0</span> / <span class="lsn-total">{segments.length}</span> 段
+          <span class="lsn-time">0:00 / 0:00</span>
+          · <span class="lsn-current">0</span> / <span class="lsn-total">{segments.length}</span> 段
         </span>
       </div>
       <input
@@ -406,14 +422,100 @@ const quizData = quizByEntry[entry.slug] || null;
         else { playBtn.click(); }
       });
       window.addEventListener('tts-stop', () => fullStop());
+
+      // 估算每段时长 + 当前段已朗读秒数
+      const durations = estimateDurations(list, rate);
+      let elapsedInSeg = 0;     // 当前段已经朗读的秒数
+      let segStartTime = 0;     // 当前段开始播放时间戳
+      // 实时更新 elapsedInSeg
+      setInterval(() => {
+        if (isPlaying && segStartTime) {
+          elapsedInSeg = (Date.now() - segStartTime) / 1000;
+          updateTimeDisplay();
+        }
+      }, 200);
+
+      function cumulativeTime(targetIdx: number, inSegOffset: number): number {
+        let t = 0;
+        for (let i = 0; i < Math.min(targetIdx, durations.length); i++) t += durations[i];
+        return t + inSegOffset;
+      }
+      function findIdxAtTime(targetTime: number): number {
+        let acc = 0;
+        for (let i = 0; i < durations.length; i++) {
+          acc += durations[i];
+          if (acc >= targetTime) return i;
+        }
+        return durations.length - 1;
+      }
+      function skipBy(deltaSec: number) {
+        const cur = cumulativeTime(idx, elapsedInSeg);
+        const target = Math.max(0, Math.min(totalDurations(), cur + deltaSec));
+        const targetIdx = findIdxAtTime(target);
+        if (targetIdx === idx && Math.abs(deltaSec) < 1) return;
+        jumpTo(targetIdx);
+        elapsedInSeg = 0;
+        segStartTime = Date.now();
+      }
+      function totalDurations(): number {
+        let s = 0;
+        for (const d of durations) s += d;
+        return s;
+      }
+      // 跳到任意段（含 ±5 秒跳跃后的段）
+      const origJumpTo = jumpTo;
+      jumpTo = function(newIdx: number) {
+        origJumpTo(newIdx);
+        elapsedInSeg = 0;
+        segStartTime = Date.now();
+        updateTimeDisplay();
+      };
+
+      function updateTimeDisplay() {
+        const cur = cumulativeTime(idx, elapsedInSeg);
+        const total = totalDurations();
+        const fmt = (s: number) => {
+          const m = Math.floor(s / 60);
+          const ss = Math.floor(s % 60);
+          return `${m}:${ss.toString().padStart(2, '0')}`;
+        };
+        const timeEl = document.getElementById('lsn-time');
+        if (timeEl) timeEl.textContent = `${fmt(cur)} / ${fmt(total)}`;
+      }
+
+      // 替换 prev/next 为 ±5 秒跳跃
       window.addEventListener('tts-prev', () => {
-        if (idx > 0) { idx--; window.speechSynthesis.cancel(); if (pendingResolve) { pendingResolve(); pendingResolve = null; } if (isPaused) updateDisplay(); }
+        if (idx <= 0 && elapsedInSeg < 1) return;
+        skipBy(-5);
+        if (isPaused) updateDisplay();
       });
       window.addEventListener('tts-next', () => {
-        if (idx < list.length - 1) { idx++; window.speechSynthesis.cancel(); if (pendingResolve) { pendingResolve(); pendingResolve = null; } if (isPaused) updateDisplay(); }
+        if (idx >= list.length - 1 && elapsedInSeg >= durations[idx] - 1) return;
+        skipBy(+5);
+        if (isPaused) updateDisplay();
       });
-      window.addEventListener('tts-rate-up', () => rateUp.click());
-      window.addEventListener('tts-rate-down', () => rateDown.click());
+
+      // 在播放开始时设 segStartTime
+      const origRun = run;
+      run = async function() {
+        segStartTime = Date.now();
+        elapsedInSeg = 0;
+        await origRun();
+      };
+
+      window.addEventListener('tts-rate-up', () => {
+        rateUp.click();
+        // 语速变化后重算 durations
+        for (let i = 0; i < durations.length; i++) {
+          durations[i] = estimateDurations([list[i]], rate)[0];
+        }
+      });
+      window.addEventListener('tts-rate-down', () => {
+        rateDown.click();
+        for (let i = 0; i < durations.length; i++) {
+          durations[i] = estimateDurations([list[i]], rate)[0];
+        }
+      });
       window.addEventListener('tts-mute', () => {
         muted = !muted;
         rateEl.parentElement!.innerHTML = muted ? '🔇 已静音 · 语速: <span class="lsn-rate">' + rate.toFixed(1) + '</span>x' : '语速: <span class="lsn-rate">' + rate.toFixed(1) + '</span>x';
@@ -421,6 +523,7 @@ const quizData = quizByEntry[entry.slug] || null;
       });
 
       updateDisplay();
+      updateTimeDisplay();
     })();
 
     // WordSpeak 初始化（场景词朗读）
