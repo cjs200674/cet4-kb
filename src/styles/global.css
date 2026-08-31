@@ -834,3 +834,252 @@ button:focus-visible,
   .hero-stats { padding: 14px 0; }
   .stat-num { font-size: 1.4em; }
 }
+
+/* ============================================
+   adapt.md：移动端精修（触摸目标 / safe area / 输入优化）
+   ============================================ */
+
+/* iOS notch / Android 圆角安全区 */
+body {
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+.site-header {
+  padding-top: max(0px, env(safe-area-inset-top));
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+/* 输入框 16px+ 避免 iOS 自动缩放 */
+input, textarea, select, .form-control {
+  font-size: 16px;
+}
+
+/* 触摸目标 ≥ 44x44（iOS HIG 标准） */
+/* 用 pointer 媒体查询，只在触屏设备上加大 */
+@media (pointer: coarse) {
+  .btn { min-height: 44px; padding: 12px 20px; }
+  .site-nav a { min-height: 44px; display: inline-flex; align-items: center; padding: 0 14px; }
+  .ws-jump, .tts-seg-jump { width: 44px; height: 44px; }
+  .quiz-option { padding: 14px 18px; min-height: 48px; }
+  .nav-badge { font-size: 13px; padding: 2px 8px; }
+  .mistake-card .m-remove { min-height: 44px; padding: 10px 16px; }
+}
+
+/* 没有 hover 能力时去掉 hover-only 动效，改用 active */
+@media (hover: none) {
+  .card:hover { transform: none; }
+  .card:active { transform: scale(0.98); }
+  .btn-primary:hover { background: var(--c-accent); }
+}
+
+/* 移动端导航：折叠 + 汉堡 */
+@media (max-width: 720px) {
+  .site-header .container {
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .site-nav {
+    width: 100%;
+    flex-direction: row;
+    overflow-x: auto;
+    padding: 8px 0;
+    gap: 2px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .site-nav::-webkit-scrollbar { display: none; }
+  .site-nav a {
+    flex-shrink: 0;
+    white-space: nowrap;
+    font-size: 13px;
+    padding: 8px 12px;
+  }
+}
+
+/* 移动端 hero / card grid 优化 */
+@media (max-width: 720px) {
+  .card-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .hero { padding: 40px 16px 32px; }
+  .hero h1 { font-size: clamp(1.5em, 7vw, 2.2em); }
+  .hero p { font-size: 1em; }
+  .hero-stats { font-size: 0.95em; }
+  .stat { min-width: 80px; }
+  .stat-num { font-size: 1.3em; }
+  .stat-label { font-size: 10px; }
+  .card { padding: 16px; }
+  .card h3 { font-size: 1.05em; }
+  .card-desc { font-size: 13px; }
+  /* 错题本卡片 */
+  .mistake-card { padding: 14px; }
+  .mistake-card-head { flex-direction: column; align-items: flex-start; }
+  /* 听力 TTS 段 */
+  .tts-section { padding: 14px; }
+  .tts-toolbar { gap: 6px; }
+  .tts-toolbar .btn { font-size: 13px; padding: 8px 12px; }
+  .tts-segment { grid-template-columns: 24px 1fr 36px; padding: 6px 4px; font-size: 13px; }
+  .tts-num, .tts-seg-jump { font-size: 12px; }
+  .tts-seg-jump { width: 36px; height: 36px; }
+  /* 词汇列表 */
+  .ws-item { font-size: 13px; grid-template-columns: 24px 1fr 36px; }
+  .ws-jump { width: 36px; height: 36px; }
+  /* 卡片导航 */
+  .mistake-card-head .mistake-wrongcount { font-size: 11px; }
+  /* 容器内边距 */
+  .container { padding: 0 16px; }
+}
+
+/* 触摸设备禁用 hover transform，改用 active 反馈 */
+@media (max-width: 720px) {
+  .card:active { transform: scale(0.99); background: var(--c-bg-soft-2); }
+  .btn:active { transform: scale(0.97); }
+}
+
+/* 滚动行为 */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ============================================
+   delight.md：微动效（让"对的瞬间"被记住）
+   ============================================ */
+
+/* 1. 卡片 hover 用 cubic-bezier 让回弹更优雅 */
+.card {
+  transition: border-color 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+              transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
+              box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 2. 按钮按下的"咔哒"反馈 */
+.btn {
+  transition: background 0.15s cubic-bezier(0.4, 0, 0.2, 1),
+              border-color 0.15s cubic-bezier(0.4, 0, 0.2, 1),
+              color 0.15s cubic-bezier(0.4, 0, 0.2, 1),
+              transform 0.08s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 3. 答对题时的成功脉冲 */
+.quiz-option.correct {
+  animation: pulse-success 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.quiz-option.wrong {
+  animation: pulse-error 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+@keyframes pulse-success {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.02); }
+  100% { transform: scale(1); }
+}
+@keyframes pulse-error {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-4px); }
+  40%, 80% { transform: translateX(4px); }
+}
+
+/* 4. 错题本"重点"标签呼吸光晕 */
+.mistake-card.is-hard {
+  animation: hard-glow 3s ease-in-out infinite;
+}
+@keyframes hard-glow {
+  0%, 100% { box-shadow: inset 3px 0 0 var(--c-error), 0 0 0 rgba(248, 81, 73, 0); }
+  50% { box-shadow: inset 3px 0 0 var(--c-error), 0 0 16px rgba(248, 81, 73, 0.08); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mistake-card.is-hard { animation: none; }
+}
+
+/* 5. 滚动到位淡入（IntersectionObserver 加 class） */
+.reveal {
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1), transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.reveal.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* 6. 顶部阅读进度条（0-100%） */
+.reading-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--c-accent), var(--c-cyan));
+  z-index: 200;
+  width: 0%;
+  transition: width 0.1s linear;
+  pointer-events: none;
+}
+
+/* 7. 朗读时 hero / 标题微脉冲 */
+@keyframes reading-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+.is-reading em { animation: reading-pulse 1.5s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .is-reading em { animation: none; }
+}
+
+/* 8. 错题本"重点复习"按钮吸引注意 */
+#m-redo-hard {
+  position: relative;
+  overflow: hidden;
+}
+#m-redo-hard::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(120deg, transparent 30%, rgba(255, 255, 255, 0.1) 50%, transparent 70%);
+  transform: translateX(-100%);
+  animation: shimmer 3s infinite;
+}
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  #m-redo-hard::before { animation: none; }
+}
+
+/* ============================================
+   callout 主题延伸：阅读/听力页自动包裹
+   （由 JS 在 .md 渲染后根据 h2 关键字套上对应颜色）
+   ============================================ */
+
+.callout-auto {
+  border-left: 3px solid var(--c-violet);
+  background: var(--c-violet-bg);
+  padding: 14px 18px;
+  margin: 1em 0;
+  border-radius: 0 8px 8px 0;
+  font-size: 0.95em;
+  line-height: 1.65;
+}
+.callout-auto.callout-amber { border-left-color: var(--c-amber); background: var(--c-amber-bg); }
+.callout-auto.callout-cyan { border-left-color: var(--c-cyan); background: var(--c-cyan-bg); }
+.callout-auto.callout-success { border-left-color: var(--c-accent-2); background: rgba(126, 231, 135, 0.06); }
+.callout-auto.callout-warning { border-left-color: var(--c-warning); background: rgba(210, 153, 34, 0.06); }
+.callout-auto > :first-child { margin-top: 0; }
+.callout-auto > :last-child { margin-bottom: 0; }
+.callout-auto h3, .callout-auto h4, .callout-auto h5 {
+  margin-top: 0.6em;
+  margin-bottom: 0.4em;
+  font-family: var(--font-sans);
+  font-size: 1em;
+  letter-spacing: 0;
+  border: none;
+  padding: 0;
+}
