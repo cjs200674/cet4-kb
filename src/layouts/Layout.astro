@@ -129,18 +129,20 @@ const base = (import.meta.env.BASE_URL || "/").replace(/\/?$/, "/");
 
       // 页面底部显示快捷键提示
       window.addEventListener('load', () => {
-        if (document.querySelector('[data-tts-host], .speak-btn, .word-speak-host, .single-speak, .ws-host')) {
+        if (document.querySelector('[data-tts-host], .speak-btn, .word-speak-host, .single-speak, .ws-host, .tts-section')) {
           let tip = document.getElementById('tts-keys-tip');
           if (!tip) {
             tip = document.createElement('div');
             tip.id = 'tts-keys-tip';
-            tip.style.cssText = 'position:fixed;bottom:12px;left:12px;background:var(--c-bg-soft);border:1px solid var(--c-border);border-radius:8px;padding:8px 12px;font-size:12px;color:var(--c-text-soft);z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.3);max-width:90vw;';
-            tip.innerHTML = '⌨️ <strong>TTS 快捷键</strong>: 空格 播放/暂停 · ← → 切段 · ↑ ↓ 调速 · M 静音 · Esc 停止';
+            tip.innerHTML =
+              '<strong>⌨️ TTS 快捷键</strong><br>' +
+              '<kbd>Space</kbd> 播放/暂停 · <kbd>←</kbd> <kbd>→</kbd> 切段 · <kbd>↑</kbd> <kbd>↓</kbd> 调速<br>' +
+              '<kbd>M</kbd> 静音 · <kbd>Esc</kbd> 停止';
             document.body.appendChild(tip);
-            // 5 秒后自动隐藏
-            setTimeout(() => { tip.style.opacity = '0.3'; }, 5000);
+            // 5 秒后自动淡出
+            setTimeout(() => { tip.style.opacity = '0.25'; }, 5000);
             tip.addEventListener('mouseenter', () => { tip.style.opacity = '1'; });
-            tip.addEventListener('mouseleave', () => { tip.style.opacity = '0.3'; });
+            tip.addEventListener('mouseleave', () => { tip.style.opacity = '0.25'; });
           }
         }
       });
