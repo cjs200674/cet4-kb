@@ -107,21 +107,25 @@ const base = (import.meta.env.BASE_URL || "/").replace(/\/?$/, "/");
         }
         function wrapSection(h: Element, cls: string) {
           // 找下一个同级或更深级的元素，包到 callout 里
+          // 重要：先把所有要移的节点收集到 fragment，
+          //       然后再把 wrapper 插入到 h 原位置。
+          //       避免 h 被移走后再去查 h.parentNode（那会是 fragment）。
+          const parent = h.parentNode!;
+          const nextSibling: Element | null = h.nextElementSibling;
           const wrapper = document.createElement('div');
           wrapper.className = 'callout-auto ' + cls;
-          const frag = document.createDocumentFragment();
-          let n: Element | null = h;
-          // 把 h 自己 + 紧随其后的同级元素都搬进去
+          parent.insertBefore(wrapper, h);
+          // 把 h 自己搬进 wrapper
+          wrapper.appendChild(h);
+          // 紧随其后的同级元素（到下一个 h1/h2 为止）也搬进去
+          let n: Element | null = h.nextElementSibling;
           while (n) {
             const next: Element | null = n.nextElementSibling;
             if (next && (next.tagName === 'H1' || next.tagName === 'H2')) break;
-            frag.appendChild(n);
+            wrapper.appendChild(n);
             if (!next) break;
             n = next;
           }
-          wrapper.appendChild(frag);
-          h.parentNode!.insertBefore(wrapper, h);
-          // 把 h 重新加到 wrapper 顶部（h 还在 frag 里）
         }
       })();
 
@@ -170,46 +174,63 @@ const base = (import.meta.env.BASE_URL || "/").replace(/\/?$/, "/");
       // 全局键盘快捷键（TTS 通用）
       // 任何带 TTS 的页面监听这些自定义事件即可
       // ============================================
+      function hasTTS() {
+        return !!document.querySelector(
+          '[data-tts-host], .speak-btn, .word-speak-host, .single-speak, .ws-host, .tts-section, .scene-host, .lsn-play'
+        );
+      }
       document.addEventListener('keydown', (e) => {
         // 输入框里不触发
         const t = e.target as HTMLElement;
         if (t && (t.matches('input, textarea, [contenteditable="true"]') || t.closest('input, textarea, [contenteditable="true"]'))) {
           return;
         }
-        // Ctrl/Meta + 组合键不冲突
-        if (e.ctrlKey || e.metaKey || e.altKey) return;
+        if (!hasTTS()) return;
+        // Alt 修饰键不冲突
+        if (e.altKey) return;
 
+        // Ctrl/Meta 修饰键：给用户"单手大跨度"控制
+        // - Ctrl + →/←：前进/后退（用户特别要求）
+        // - Ctrl + Space：切换播放/暂停
+        if (e.ctrlKey || e.metaKey) {
+          if (e.key === 'ArrowRight') { e.preventDefault(); window.dispatchEvent(new CustomEvent('tts-next')); return; }
+          if (e.key === 'ArrowLeft')  { e.preventDefault(); window.dispatchEvent(new CustomEvent('tts-prev')); return; }
+          if (e.key === ' ')          { e.preventDefault(); window.dispatchEvent(new CustomEvent('tts-toggle')); return; }
+          if (e.key === 'ArrowUp')    { e.preventDefault(); window.dispatchEvent(new CustomEvent('tts-rate-up')); return; }
+          if (e.key === 'ArrowDown')  { e.preventDefault(); window.dispatchEvent(new CustomEvent('tts-rate-down')); return; }
+          if (e.key === 'm' || e.key === 'M') { e.preventDefault(); window.dispatchEvent(new CustomEvent('tts-mute')); return; }
+          return;
+        }
+
+        // 无修饰键：基础控制
         let evt = '';
         switch (e.key) {
           case ' ':
-            evt = 'tts-toggle';     // 空格：播放/暂停
+            evt = 'tts-toggle';
             break;
           case 'ArrowLeft':
-            evt = 'tts-prev';       // ←：上一段
+            evt = 'tts-prev';
             break;
           case 'ArrowRight':
-            evt = 'tts-next';       // →：下一段
+            evt = 'tts-next';
             break;
           case 'Escape':
-            evt = 'tts-stop';       // Esc：停止
+            evt = 'tts-stop';
             break;
           case 'ArrowUp':
-            evt = 'tts-rate-up';    // ↑：加快语速
+            evt = 'tts-rate-up';
             break;
           case 'ArrowDown':
-            evt = 'tts-rate-down';  // ↓：放慢语速
+            evt = 'tts-rate-down';
             break;
           case 'm':
           case 'M':
-            evt = 'tts-mute';       // M：静音
+            evt = 'tts-mute';
             break;
         }
         if (evt) {
-          // 仅在有 TTS 元素的页面才拦截
-          if (document.querySelector('[data-tts-host], .speak-btn, .word-speak-host, .single-speak')) {
-            e.preventDefault();
-            window.dispatchEvent(new CustomEvent(evt));
-          }
+          e.preventDefault();
+          window.dispatchEvent(new CustomEvent(evt));
         }
       });
 
