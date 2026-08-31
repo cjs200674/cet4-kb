@@ -16,6 +16,15 @@
   --c-accent-2: #7ee787;
   --c-warning: #d29922;
   --c-error: #f85149;
+  /* 角色色（colorize）：不同模块用不同色，不再"千篇一律蓝" */
+  --c-violet: #bc8cff;       /* 考点/技巧/思考 - 阅读解析 */
+  --c-violet-bg: rgba(188, 140, 255, 0.14);
+  --c-amber: #ffa657;         /* 提醒/重点/重要标记 */
+  --c-amber-bg: rgba(255, 166, 87, 0.14);
+  --c-cyan: #76e3ea;          /* 链接/方法/技巧 - 听力 */
+  --c-cyan-bg: rgba(118, 227, 234, 0.14);
+  --c-pink: #ff9bb0;          /* 例句/对话/口语 */
+  --c-pink-bg: rgba(255, 155, 176, 0.14);
   --c-tag-bg: rgba(88, 166, 255, 0.15);
   --c-tag-text: #79c0ff;
   --c-card-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
@@ -49,7 +58,11 @@ body {
   color: var(--c-text);
   font-family: var(--font-sans);
   font-size: 16px;
-  line-height: 1.6;
+  /* 深色背景需要更多 leading（typeset 建议：宽行 + 轻字重时增加 line-height） */
+  line-height: 1.7;
+  font-feature-settings: "kern" 1, "liga" 1, "calt" 1;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   min-height: 100vh;
 }
 
@@ -175,11 +188,14 @@ li::marker {
 
 code {
   font-family: var(--font-mono);
-  font-size: 0.9em;
+  font-size: 0.875em;
+  font-feature-settings: "calt" 1;
   background: var(--c-bg-soft-2);
   padding: 2px 6px;
   border-radius: 4px;
   color: var(--c-accent-2);
+  /* 等宽，代码边界更清晰 */
+  border: 1px solid var(--c-border);
 }
 pre {
   background: var(--c-bg-soft-2) !important;
@@ -213,16 +229,21 @@ table {
   border-collapse: collapse;
   margin: 1em 0;
   font-size: 0.95em;
+  font-variant-numeric: tabular-nums;
 }
 th,
 td {
   text-align: left;
-  padding: 8px 12px;
+  padding: 10px 14px;
   border: 1px solid var(--c-border);
 }
 th {
   background: var(--c-bg-soft);
   font-weight: 600;
+  font-size: 0.85em;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--c-text-soft);
 }
 
 /* ----- Cards (vocab list, etc.) ----- */
@@ -283,6 +304,69 @@ th {
 .tag-hard {
   background: rgba(248, 81, 73, 0.15);
   color: var(--c-error);
+}
+
+/* 角色色变体（colorize）：用语义色，不用都蓝 */
+.tag-violet,
+.tag-考点,
+.tag-技巧 {
+  background: var(--c-violet-bg);
+  color: var(--c-violet);
+}
+.tag-amber,
+.tag-重点,
+.tag-提醒 {
+  background: var(--c-amber-bg);
+  color: var(--c-amber);
+}
+.tag-cyan,
+.tag-方法,
+.tag-听力 {
+  background: var(--c-cyan-bg);
+  color: var(--c-cyan);
+}
+.tag-pink,
+.tag-例句,
+.tag-口语 {
+  background: var(--c-pink-bg);
+  color: var(--c-pink);
+}
+.tag-success {
+  background: rgba(126, 231, 135, 0.15);
+  color: var(--c-accent-2);
+}
+.tag-info {
+  background: var(--c-cyan-bg);
+  color: var(--c-cyan);
+}
+
+/* callout 提示框（colorize 用法） */
+.callout {
+  border-left: 3px solid var(--c-accent);
+  background: rgba(88, 166, 255, 0.06);
+  padding: 12px 16px;
+  margin: 1.2em 0;
+  border-radius: 0 6px 6px 0;
+  font-size: 0.95em;
+  line-height: 1.6;
+}
+.callout-violet { border-left-color: var(--c-violet); background: var(--c-violet-bg); }
+.callout-amber { border-left-color: var(--c-amber); background: var(--c-amber-bg); }
+.callout-cyan { border-left-color: var(--c-cyan); background: var(--c-cyan-bg); }
+.callout-success { border-left-color: var(--c-accent-2); background: rgba(126, 231, 135, 0.06); }
+.callout-warning { border-left-color: var(--c-warning); background: rgba(210, 153, 34, 0.06); }
+.callout-danger { border-left-color: var(--c-error); background: rgba(248, 81, 73, 0.06); }
+.callout p { margin: 0.4em 0; }
+
+/* metadata 角色（typeset）：小字 + 大写 + letter-spacing */
+.meta,
+small.meta,
+.muted-sm {
+  font-size: 0.8em;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--c-text-dim);
+  font-weight: 500;
 }
 
 /* ----- Hero ----- */

@@ -25,8 +25,8 @@ const base = (import.meta.env.BASE_URL || "/").replace(/\/?$/, "/");
       <a href={`${base}reading/${e.slug}`} class="card">
         <h3>{e.data.title}</h3>
         <div class="card-meta">
-          {e.data.year && <span class="tag">{e.data.year} 年</span>}
-          {e.data.passageType && <span class="tag">{e.data.passageType}</span>}
+          {e.data.year && <span class="tag tag-cyan">{e.data.year} 年</span>}
+          {e.data.passageType && <span class="tag tag-violet">{e.data.passageType}</span>}
           {e.data.source && <span class="dim">{e.data.source}</span>}
         </div>
         <p class="card-desc">{e.data.description || ''}</p>
